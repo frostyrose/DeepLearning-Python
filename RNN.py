@@ -726,10 +726,10 @@ def print_label_distribution(flat_labels,label_names=None):
 
 
 def saveInstance(model,filename):
-    pickle.dump(model, open("model.p","wb"))
+    pickle.dump(model, open(filename,"wb"))
 
 def loadInstance(model,filename):
-    model = pickle.load(open("model.p", "rb" ))
+    model = pickle.load(open(filename, "rb" ))
 
 def train_and_test(data_filename):
     training = []
