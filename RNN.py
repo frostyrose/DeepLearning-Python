@@ -4,6 +4,7 @@ import theano.tensor as T
 import lasagne
 import time
 import pickle
+import sys
 from lasagne.layers import *
 import DataUtility as du
 
@@ -728,8 +729,9 @@ def print_label_distribution(flat_labels,label_names=None):
 def saveInstance(model,filename):
     pickle.dump(model, open(filename,"wb"))
 
-def loadInstance(model,filename):
+def loadInstance(filename):
     model = pickle.load(open(filename, "rb" ))
+    return model
 
 def train_and_test(data_filename):
     training = []
@@ -776,9 +778,11 @@ def train_and_test(data_filename):
         print_label_distribution(flatten_sequence(labels), ["Confused", "Concentrating", "Bored", "Frustrated"])
         GNET.set_training_params(batches, epoch)
         GNET.train(training, label_train)
+    sys.setrecursionlimit(10000)
     saveInstance(GNET,"GNET.pickle")
     GNET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
-
+    GNET2 = loadInstance("GNET.pickle")
+    GNET2.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
 
 ##########################################################################################################
 

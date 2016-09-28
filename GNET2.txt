@@ -1,0 +1,151 @@
+D:\Users\Cameron\Documents\GitHub\DeepLearning-Python>python RNN.py 2> error.txt
+
+ 0:  UNIQUE_ID          jacln-m_assistments-lindsey_12_45-05.22.2012_at_13:12:34
+-1337706754000-
+ 1:  Clip_Sequence      1.0
+ 2:  clip               3.0
+ 3:  AverageattemptCount 1.5
+ 4:  AveragebottomHint  0.0
+ 5:  Averagecorrect     1.0
+ 6:  AveragefrIsHelpRequest 0.0
+ 7:  AveragefrPast5HelpRequest 0.0
+ 8:  AveragefrPast5WrongCount 0.0
+ 9:  AveragefrPast8HelpRequest 0.0
+10:  AveragefrPast8WrongCount 0.0
+11:  AveragefrWorkingInSchool 0.0
+12:  Averagehint        0.0
+13:  AveragehintCount   0.0
+14:  AveragehintTotal   0.0
+15:  Averageoriginal    1.0
+16:  Averagepast8BottomOut 0.0
+17:  Averagescaffold    0.0
+18:  AveragestlHintUsed 0.0
+19:  AveragetimeSinceSkill 0.0
+20:  AveragetimeTaken   95.873
+21:  AveragetotalFrAttempted 1.333333333
+22:  AveragetotalFrPastWrongCount 0.5
+23:  AveragetotalFrPercentPastWrong 0.0
+24:  AveragetotalFrSkillOpportunities 0.5
+25:  AveragetotalFrTimeOnSkill 94.237
+26:  MaxattemptCount    2.0
+27:  MaxbottomHint      0.0
+28:  Maxcorrect         1.0
+29:  MaxfrIsHelpRequest 0.0
+30:  MaxfrPast5HelpRequest 0.0
+31:  MaxfrPast5WrongCount 0.0
+32:  MaxfrPast8HelpRequest 0.0
+33:  MaxfrPast8WrongCount 0.0
+34:  MaxfrWorkingInSchool 0.0
+35:  Maxhint            0.0
+36:  MaxhintCount       0.0
+37:  MaxhintTotal       0.0
+38:  Maxoriginal        1.0
+39:  Maxpast8BottomOut  0.0
+40:  Maxscaffold        0.0
+41:  MaxstlHintUsed     0.0
+42:  MaxtimeSinceSkill  0.0
+43:  MaxtimeTaken       188.474
+44:  MaxtotalFrAttempted 2.0
+45:  MaxtotalFrPastWrongCount 1.0
+46:  MaxtotalFrPercentPastWrong 0.0
+47:  MaxtotalFrSkillOpportunities 1.0
+48:  MaxtotalFrTimeOnSkill 188.474
+49:  MinattemptCount    1.0
+50:  MinbottomHint      0.0
+51:  Mincorrect         1.0
+52:  MinfrIsHelpRequest 0.0
+53:  MinfrPast5HelpRequest 0.0
+54:  MinfrPast5WrongCount 0.0
+55:  MinfrPast8HelpRequest 0.0
+56:  MinfrPast8WrongCount 0.0
+57:  MinfrWorkingInSchool 0.0
+58:  Minhint            0.0
+59:  MinhintCount       0.0
+60:  MinhintTotal       0.0
+61:  Minoriginal        1.0
+62:  Minpast8BottomOut  0.0
+63:  Minscaffold        0.0
+64:  MinstlHintUsed     0.0
+65:  MintimeSinceSkill  0.0
+66:  MintimeTaken       3.272
+67:  MintotalFrAttempted 0.0
+68:  MintotalFrPastWrongCount 0.0
+69:  MintotalFrPercentPastWrong 0.0
+70:  MintotalFrSkillOpportunities 0.0
+71:  MintotalFrTimeOnSkill 0.0
+72:  SumattemptCount    9.0
+73:  SumbottomHint      0.0
+74:  Sumcorrect         6.0
+75:  SumfrIsHelpRequest 0.0
+76:  SumfrPast5HelpRequest 0.0
+77:  SumfrPast5WrongCount 0.0
+78:  SumfrPast8HelpRequest 0.0
+79:  SumfrPast8WrongCount 0.0
+80:  SumfrWorkingInSchool 0.0
+81:  Sumhint            0.0
+82:  SumhintCount       0.0
+83:  SumhintTotal       0.0
+84:  Sumoriginal        6.0
+85:  Sumpast8BottomOut  0.0
+86:  Sumscaffold        0.0
+87:  SumstlHintUsed     0.0
+88:  SumtimeSinceSkill  0.0
+89:  SumtimeTaken       575.238
+90:  SumtotalFrAttempted 8.0
+91:  SumtotalFrPastWrongCount 3.0
+92:  SumtotalFrPercentPastWrong 0.0
+93:  SumtotalFrSkillOpportunities 3.0
+94:  SumtotalFrTimeOnSkill 565.422
+95:  Confused           0.0
+96:  Concentrating      1.0
+97:  Bored              0.0
+98:  Frustrated         0.0
+
+transforming data to time series...
+
+Dataset Info:
+number of samples: 1808
+sequence length of first sample: 1
+input nodes:  92
+Adding Representation to label: 0
+Adding Representation to label: 2
+Adding Representation to label: 3
+
+Testing...
+Test Samples: 361
+Predicting: [ 0.03853565  0.82080925  0.11753372  0.02312139] for baseline*
+*This is calculated from the TEST labels
+
+Label Distribution:
+   Confused: 20.0   (4%)
+   Concentrating: 426.0  (82%)
+   Bored: 61.0   (12%)
+   Frustrated: 12.0   (2%)
+
+Baseline Average Cross-Entropy: 0.6263
+
+Network Performance:
+Average Cross-Entropy: 0.4656
+AUC: 0.9091
+A': 0.9091
+Kappa: 0.4023
+F1 Score: 0.4976
+Percent Correct: 86.71%
+
+  Label           AUC       A'        Kappa     F Stat
+==============================================
+Confused          0.9043    0.9043    0.3906    0.4000
+Concentrating     0.8988    0.8988    0.6065    0.9412
+Bored             0.8724    0.8724    0.3310    0.3636
+Frustrated        0.9610    0.9610    0.2810    0.2857
+
+==============================================
+Confusion Matrix:
+        6     12    1     1
+        0     421   5     0
+        1     41    18    1
+        0     5     2     5
+
+==============================================
+
+D:\Users\Cameron\Documents\GitHub\DeepLearning-Python>

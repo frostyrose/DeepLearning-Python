@@ -1,0 +1,153 @@
+ 0:  UNIQUE_ID          jacln-m_assistments-lindsey_12_45-05.22.2012_at_13:12:34-1337706754000-
+ 1:  Clip_Sequence      1.0         
+ 2:  clip               3.0         
+ 3:  AverageattemptCount 1.5         
+ 4:  AveragebottomHint  0.0         
+ 5:  Averagecorrect     1.0         
+ 6:  AveragefrIsHelpRequest 0.0         
+ 7:  AveragefrPast5HelpRequest 0.0         
+ 8:  AveragefrPast5WrongCount 0.0         
+ 9:  AveragefrPast8HelpRequest 0.0         
+10:  AveragefrPast8WrongCount 0.0         
+11:  AveragefrWorkingInSchool 0.0         
+12:  Averagehint        0.0         
+13:  AveragehintCount   0.0         
+14:  AveragehintTotal   0.0         
+15:  Averageoriginal    1.0         
+16:  Averagepast8BottomOut 0.0         
+17:  Averagescaffold    0.0         
+18:  AveragestlHintUsed 0.0         
+19:  AveragetimeSinceSkill 0.0         
+20:  AveragetimeTaken   95.873      
+21:  AveragetotalFrAttempted 1.333333333 
+22:  AveragetotalFrPastWrongCount 0.5         
+23:  AveragetotalFrPercentPastWrong 0.0         
+24:  AveragetotalFrSkillOpportunities 0.5         
+25:  AveragetotalFrTimeOnSkill 94.237      
+26:  MaxattemptCount    2.0         
+27:  MaxbottomHint      0.0         
+28:  Maxcorrect         1.0         
+29:  MaxfrIsHelpRequest 0.0         
+30:  MaxfrPast5HelpRequest 0.0         
+31:  MaxfrPast5WrongCount 0.0         
+32:  MaxfrPast8HelpRequest 0.0         
+33:  MaxfrPast8WrongCount 0.0         
+34:  MaxfrWorkingInSchool 0.0         
+35:  Maxhint            0.0         
+36:  MaxhintCount       0.0         
+37:  MaxhintTotal       0.0         
+38:  Maxoriginal        1.0         
+39:  Maxpast8BottomOut  0.0         
+40:  Maxscaffold        0.0         
+41:  MaxstlHintUsed     0.0         
+42:  MaxtimeSinceSkill  0.0         
+43:  MaxtimeTaken       188.474     
+44:  MaxtotalFrAttempted 2.0         
+45:  MaxtotalFrPastWrongCount 1.0         
+46:  MaxtotalFrPercentPastWrong 0.0         
+47:  MaxtotalFrSkillOpportunities 1.0         
+48:  MaxtotalFrTimeOnSkill 188.474     
+49:  MinattemptCount    1.0         
+50:  MinbottomHint      0.0         
+51:  Mincorrect         1.0         
+52:  MinfrIsHelpRequest 0.0         
+53:  MinfrPast5HelpRequest 0.0         
+54:  MinfrPast5WrongCount 0.0         
+55:  MinfrPast8HelpRequest 0.0         
+56:  MinfrPast8WrongCount 0.0         
+57:  MinfrWorkingInSchool 0.0         
+58:  Minhint            0.0         
+59:  MinhintCount       0.0         
+60:  MinhintTotal       0.0         
+61:  Minoriginal        1.0         
+62:  Minpast8BottomOut  0.0         
+63:  Minscaffold        0.0         
+64:  MinstlHintUsed     0.0         
+65:  MintimeSinceSkill  0.0         
+66:  MintimeTaken       3.272       
+67:  MintotalFrAttempted 0.0         
+68:  MintotalFrPastWrongCount 0.0         
+69:  MintotalFrPercentPastWrong 0.0         
+70:  MintotalFrSkillOpportunities 0.0         
+71:  MintotalFrTimeOnSkill 0.0         
+72:  SumattemptCount    9.0         
+73:  SumbottomHint      0.0         
+74:  Sumcorrect         6.0         
+75:  SumfrIsHelpRequest 0.0         
+76:  SumfrPast5HelpRequest 0.0         
+77:  SumfrPast5WrongCount 0.0         
+78:  SumfrPast8HelpRequest 0.0         
+79:  SumfrPast8WrongCount 0.0         
+80:  SumfrWorkingInSchool 0.0         
+81:  Sumhint            0.0         
+82:  SumhintCount       0.0         
+83:  SumhintTotal       0.0         
+84:  Sumoriginal        6.0         
+85:  Sumpast8BottomOut  0.0         
+86:  Sumscaffold        0.0         
+87:  SumstlHintUsed     0.0         
+88:  SumtimeSinceSkill  0.0         
+89:  SumtimeTaken       575.238     
+90:  SumtotalFrAttempted 8.0         
+91:  SumtotalFrPastWrongCount 3.0         
+92:  SumtotalFrPercentPastWrong 0.0         
+93:  SumtotalFrSkillOpportunities 3.0         
+94:  SumtotalFrTimeOnSkill 565.422     
+95:  Confused           0.0         
+96:  Concentrating      1.0         
+97:  Bored              0.0         
+98:  Frustrated         0.0         
+
+transforming data to time series...
+
+Dataset Info:
+number of samples: 1808
+sequence length of first sample: 1
+input nodes:  92
+Adding Representation to label: 0
+Adding Representation to label: 2
+Adding Representation to label: 3
+
+Label Distribution:
+   Confused: 991.0  (17%)
+   Concentrating: 1162.0 (20%)
+   Bored: 2713.0 (46%)
+   Frustrated: 971.0  (17%)
+
+Building Network...
+Network Params: 258504
+Number of Folds: 10
+Training Samples (Sequences): 1446
+
+Training GRU...
+  Epoch     Train     Valid     Time    
+======================================
+Epoch 1:    0.6316    0.6041    469.5s
+Epoch 2:    0.4856    0.4840    455.6s
+Epoch 3:    0.4427    0.4428    443.4s
+Epoch 4:    0.4168    0.4110    440.1s
+Epoch 5:    0.3965    0.3968    441.4s
+Total Training Time: 2250.1s
+
+Label Distribution:
+   Confused: 97.0   (4%)
+   Concentrating: 2117.0 (80%)
+   Bored: 325.0  (12%)
+   Frustrated: 94.0   (4%)
+Number of Folds: 10
+Training Samples (Sequences): 1446
+
+Training GRU...
+  Epoch     Train     Valid     Time    
+======================================
+Epoch 1:    0.9136    0.8736    393.7s
+Epoch 2:    0.6259    0.6169    394.2s
+Epoch 3:    0.5767    0.5752    393.5s
+Epoch 4:    0.5564    0.5529    395.6s
+Epoch 5:    0.5437    0.5437    395.1s
+Epoch 6:    0.5340    0.5302    396.1s
+Epoch 7:    0.5267    0.5259    396.4s
+Epoch 8:    0.5176    0.5215    397.3s
+Epoch 9:    0.5149    0.5167    394.8s
+Epoch 10:   0.5097    0.5124    395.4s
+Total Training Time: 3952.1s
