@@ -779,10 +779,17 @@ def train_and_test(data_filename):
         GNET.set_training_params(batches, epoch)
         GNET.train(training, label_train)
     sys.setrecursionlimit(10000)
+    print "Saving Instance"
     saveInstance(GNET,"GNET.pickle")
+    print "Instance Saved"
     GNET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    print "GNET Testing Completed"
+    print "Loading GNET from Pickle File"
     GNET2 = loadInstance("GNET.pickle")
+    print "Pickle File Loaded"
+    print "GNET 2 Testing"
     GNET2.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    print "GNET 2 Testing Completed"
 
 ##########################################################################################################
 
