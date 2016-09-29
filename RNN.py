@@ -727,7 +727,7 @@ def print_label_distribution(flat_labels,label_names=None):
 
 
 def saveInstance(model,filename):
-    pickle.dump(model, open(filename,"wb"))
+    pickle.dump(model, open(filename,"wb"), -1)
 
 def loadInstance(filename):
     model = pickle.load(open(filename, "rb" ))
