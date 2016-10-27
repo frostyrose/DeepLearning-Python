@@ -7,6 +7,8 @@ import pickle
 import sys
 from lasagne.layers import *
 import DataUtility as du
+from flask import Flask
+app = Flask(__name__)
 
 class RNN_GRU:
     f_predictions = T.fvector('func_predictions')
@@ -780,12 +782,12 @@ def train_and_test(data_filename):
         GNET.train(training, label_train)
     sys.setrecursionlimit(10000)
     print "Saving Instance"
-    saveInstance(GNET,"GNET.pickle")
+    saveInstance(GNET,"RNN.pickle")
     print "Instance Saved"
     GNET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
     print "GNET Testing Completed"
     print "Loading GNET from Pickle File"
-    GNET2 = loadInstance("GNET.pickle")
+    GNET2 = loadInstance("RNN.pickle")
     print "Pickle File Loaded"
     print "GNET 2 Testing"
     GNET2.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
@@ -793,7 +795,53 @@ def train_and_test(data_filename):
 
 ##########################################################################################################
 
+def test(data_filename, pickle_file):
+    training = []
+    test = []
+    label_train = []
+    label_test = []
+
+    data, labels = load_data(data_filename, 0, 1, range(3, 95), range(95, 99))
+
+    training, test, label_train, label_test = du.split_training_test(data, labels, training_size=.8)
+
+    t_labels = du.transpose(flatten_sequence(labels))
+
+    import math
+    rep_confused = int(math.floor((len(t_labels[0]) / np.nansum(t_labels[0])) + 1))
+    rep_bored = int(math.floor((len(t_labels[2]) / np.nansum(t_labels[2])) + 1))
+    rep_frustrated = int(math.floor((len(t_labels[3]) / np.nansum(t_labels[3])) + 1))
+
+    # add redundancy
+    rep_training, rep_label_train = add_representation(training, label_train, 0, rep_confused, 0.1)
+    rep_training, rep_label_train = add_representation(rep_training, rep_label_train, 2, rep_bored, 0.1)
+    rep_training, rep_label_train = add_representation(rep_training, rep_label_train, 3, rep_frustrated, 0.1)
+
+    rep_training, rep_label_train = du.sample(rep_training, rep_label_train, p=1, n=len(training))
+
+    nodes = 250
+    batches = 1
+    re_epoch = 5
+    epoch = 10
+
+    print "Loading GNET from Pickle File"
+    GNET2 = loadInstance(pickle_file)
+    print "Pickle File: %s  -- Loaded" % pickle_file
+    print "GNET 2 Testing"
+    GNET2.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    print "GNET 2 Testing Completed"
+
+# @app.route('/')
+# def hello_world():
+#     return 'Hello, World!'
+#
+# @app.route('/RNN/<filename>')
+# def setFile(filename):
+#     test("resources/"+filename,"RNN.pickle")
+#     return "Accessing File: %s" % filename
+
 
 if __name__ == "__main__":
-
-    train_and_test("resources/affect_ground_truth.csv")
+    print "Hi"
+    #train_and_test("resources/affect_ground_truth.csv")
+    test("resources/affect_ground_truth.csv","RNN.pickle")
