@@ -796,6 +796,7 @@ def train_and_test(data_filename):
 ##########################################################################################################
 
 def test(data_filename, pickle_file):
+    from RNN import RNN_GRU
     training = []
     test = []
     label_train = []
@@ -839,9 +840,14 @@ def test(data_filename, pickle_file):
 # def setFile(filename):
 #     test("resources/"+filename,"RNN.pickle")
 #     return "Accessing File: %s" % filename
+#
+# @app.route('/train/<filename>')
+# def runTraining(filename):
+#     train_and_test("resources/"+filename)
+#     return "Training on %s" % filename
 
 
 if __name__ == "__main__":
     print "Hi"
     #train_and_test("resources/affect_ground_truth.csv")
-    test("resources/affect_ground_truth.csv","RNN.pickle")
+    #test("resources/affect_ground_truth.csv","RNN.pickle")
