@@ -1,5 +1,6 @@
 #import urllib3
 from RNN import *
+from mathFuctions import *
 from flask import Flask
 from RNN import RNN_GRU
 app = Flask(__name__)
@@ -29,4 +30,9 @@ def runTraining(filename):
 
 @app.route('/MATH/<testType>/<dataFile>')
 def runMath(testType, dataFile):
+    if str(testType) == "chisquared":
+        chiSquaredTest(dataFile)
+    # ADD ADDITIONAL CASES FOR ADDITIONAL TESTS
+    else:
+        return ("No Valid Test Selected")
     return ("Running " + testType + " on the " + dataFile + " data.")

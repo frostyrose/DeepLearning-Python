@@ -3,8 +3,8 @@ import theano
 import theano.tensor as T
 import lasagne
 import time
-import pickle
 import sys
+import pickleUtility as pu
 from lasagne.layers import *
 import DataUtility as du
 from flask import Flask
@@ -728,13 +728,6 @@ def print_label_distribution(flat_labels,label_names=None):
             "({0:.0f}%)".format((float(np.nansum(np.array(labels[i])))/len(labels[i]))*100)
 
 
-def saveInstance(model,filename):
-    pickle.dump(model, open(filename,"wb"), -1)
-
-def loadInstance(filename):
-    model = pickle.load(open(filename, "rb" ))
-    return model
-
 def train_and_test(data_filename):
     training = []
     test = []
@@ -782,12 +775,12 @@ def train_and_test(data_filename):
         GNET.train(training, label_train)
     sys.setrecursionlimit(10000)
     print "Saving Instance"
-    saveInstance(GNET,"RNN.pickle")
+    pu.saveInstance(GNET,"RNN.pickle")
     print "Instance Saved"
     GNET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
     print "GNET Testing Completed"
     print "Loading GNET from Pickle File"
-    GNET2 = loadInstance("RNN.pickle")
+    GNET2 = pu.loadInstance("RNN.pickle")
     print "Pickle File Loaded"
     print "GNET 2 Testing"
     GNET2.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
@@ -826,7 +819,7 @@ def test(data_filename, pickle_file):
     epoch = 10
 
     print "Loading GNET from Pickle File"
-    GNET2 = loadInstance(pickle_file)
+    GNET2 = pu.loadInstance(pickle_file)
     print "Pickle File: %s  -- Loaded" % pickle_file
     print "GNET 2 Testing"
     GNET2.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
