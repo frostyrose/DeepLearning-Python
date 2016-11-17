@@ -1,1 +1,0 @@
-Using gpu device 0: GeForce GTX 1070 (CNMeM is disabled, cuDNN not available)
