@@ -34,8 +34,8 @@ def runTraining(testType,filename):
 @app.route('/MATH/<testType>/<dataFile>')
 def runMath(testType, dataFile):
     if str(testType) == "chisquared":
-        chiSquaredTest(dataFile)
+        resultFile = chiSquaredTest(dataFile)
     # ADD ADDITIONAL CASES FOR ADDITIONAL TESTS
     else:
         return ("No Valid Test Selected")
-    return ("Running " + testType + " on the " + dataFile + " data.")
+    return ("Running " + testType + " on the " + dataFile + " data.\nResult File Location: " + resultFile)
