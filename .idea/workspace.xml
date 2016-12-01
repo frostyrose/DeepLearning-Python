@@ -5,8 +5,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6681ef86-7044-4f94-8bb3-9a816b079ebe" name="Default" comment="">
+      <change type="DELETED" beforePath="$PROJECT_DIR$/DeepLearning-Python.7z" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/GNET.pickle" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/GNET.txt" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/GNET2.txt" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/error.txt" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/fullResults.txt" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/fullResults2.txt" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/results.txt" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/testData.txt" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/RNN.pickle" afterPath="$PROJECT_DIR$/RNN.pickle" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/timeseries_data.npy" afterPath="$PROJECT_DIR$/timeseries_data.npy" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/timeseries_labels.npy" afterPath="$PROJECT_DIR$/timeseries_labels.npy" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/RNN.py" afterPath="$PROJECT_DIR$/RNN.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask-server.py" afterPath="$PROJECT_DIR$/flask-server.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mathFuctions.py" afterPath="$PROJECT_DIR$/mathFuctions.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pickleUtility.py" afterPath="$PROJECT_DIR$/pickleUtility.py" />
     </list>
     <ignored path="DeepLearning.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -33,7 +47,7 @@
       <file leaf-file-name="DataUtility.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/DataUtility.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="17">
+            <state relative-caret-position="1632">
               <caret line="101" column="54" selection-start-line="101" selection-start-column="54" selection-end-line="101" selection-end-column="54" />
               <folding />
             </state>
@@ -43,8 +57,8 @@
       <file leaf-file-name="flask-server.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flask-server.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="15" selection-start-line="0" selection-start-column="15" selection-end-line="0" selection-end-column="15" />
+            <state relative-caret-position="408">
+              <caret line="24" column="8" selection-start-line="24" selection-start-column="8" selection-end-line="24" selection-end-column="8" />
               <folding>
                 <element signature="e#16#26#0" expanded="true" />
               </folding>
@@ -52,13 +66,13 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="mathFuctions.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="mathFuctions.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mathFuctions.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="187">
-              <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+            <state relative-caret-position="340">
+              <caret line="21" column="34" selection-start-line="21" selection-start-column="34" selection-end-line="21" selection-end-column="34" />
               <folding>
-                <element signature="e#0#27#0" expanded="true" />
+                <element signature="e#29#53#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -67,7 +81,7 @@
       <file leaf-file-name="RNN.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/RNN.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="884">
+            <state relative-caret-position="1215">
               <caret line="449" column="26" selection-start-line="449" selection-start-column="20" selection-end-line="449" selection-end-column="26" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
@@ -79,7 +93,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="pickleUtility.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="pickleUtility.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/pickleUtility.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="68">
@@ -106,10 +120,10 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/RNN.py" />
-        <option value="$PROJECT_DIR$/pickleUtility.py" />
-        <option value="$PROJECT_DIR$/flask-server.py" />
         <option value="$PROJECT_DIR$/mathFuctions.py" />
+        <option value="$PROJECT_DIR$/RNN.py" />
+        <option value="$PROJECT_DIR$/flask-server.py" />
+        <option value="$PROJECT_DIR$/pickleUtility.py" />
       </list>
     </option>
   </component>
@@ -120,7 +134,7 @@
     <sorting>DEFINITION_ORDER</sorting>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="1912" />
+    <option name="x" value="-1928" />
     <option name="y" value="-8" />
     <option name="width" value="1936" />
     <option name="height" value="1056" />
@@ -390,7 +404,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1912" y="-8" width="1936" height="1056" extended-state="6" />
+    <frame x="-1928" y="-8" width="1936" height="1056" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.020833334" sideWeight="0.24590164" order="4" side_tool="true" content_ui="combo" />
@@ -456,57 +470,6 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/DataUtility.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1717">
-          <caret line="101" column="54" selection-start-line="101" selection-start-column="54" selection-end-line="101" selection-end-column="54" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/flask-server.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="24" column="8" selection-start-line="24" selection-start-column="8" selection-end-line="24" selection-end-column="8" />
-          <folding>
-            <element signature="e#16#26#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/mathFuctions.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="21" column="34" selection-start-line="21" selection-start-column="34" selection-end-line="21" selection-end-column="34" />
-          <folding>
-            <element signature="e#0#27#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/RNN.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5525">
-          <caret line="449" column="26" selection-start-line="449" selection-start-column="20" selection-end-line="449" selection-end-column="26" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-            <element signature="e#634#3035#0" expanded="false" />
-            <element signature="e#7081#8772#0" expanded="false" />
-            <element signature="e#8935#9200#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pickleUtility.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#13#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DataUtility.py">
-      <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1632">
           <caret line="101" column="54" selection-start-line="101" selection-start-column="54" selection-end-line="101" selection-end-column="54" />
           <folding />
@@ -528,7 +491,7 @@
         <state relative-caret-position="340">
           <caret line="21" column="34" selection-start-line="21" selection-start-column="34" selection-end-line="21" selection-end-column="34" />
           <folding>
-            <element signature="e#0#27#0" expanded="true" />
+            <element signature="e#29#53#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -789,27 +752,27 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/mathFuctions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="340">
+          <caret line="21" column="34" selection-start-line="21" selection-start-column="34" selection-end-line="21" selection-end-column="34" />
+          <folding>
+            <element signature="e#29#53#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/DataUtility.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17">
+        <state relative-caret-position="1632">
           <caret line="101" column="54" selection-start-line="101" selection-start-column="54" selection-end-line="101" selection-end-column="54" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flask-server.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="15" selection-start-line="0" selection-start-column="15" selection-end-line="0" selection-end-column="15" />
-          <folding>
-            <element signature="e#16#26#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/RNN.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="884">
+        <state relative-caret-position="1215">
           <caret line="449" column="26" selection-start-line="449" selection-start-column="20" selection-end-line="449" selection-end-column="26" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
@@ -820,22 +783,22 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/flask-server.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="408">
+          <caret line="24" column="8" selection-start-line="24" selection-start-column="8" selection-end-line="24" selection-end-column="8" />
+          <folding>
+            <element signature="e#16#26#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/pickleUtility.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="68">
           <caret line="4" column="38" selection-start-line="4" selection-start-column="38" selection-end-line="4" selection-end-column="38" />
           <folding>
             <element signature="e#0#13#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/mathFuctions.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="187">
-          <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#27#0" expanded="true" />
           </folding>
         </state>
       </provider>
