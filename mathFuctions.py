@@ -20,10 +20,11 @@ def chiSquaredTest(dataFile):
     filename = readInFile(dataFile) #where datafile will be the location of the data on the external machine
     f_obs, headers = du.loadCSVwithHeaders(filename)
 
-    result_statistic, pvals = Stats.chisquare(f_obs)
+    result_statistic = Stats.chisquare(f_obs)
 
     newFileName = "Placeholder" #we can come up with a more formal scheme later
-    du.writetoCSV(result_statistic, newFileName, headers)
+    du.writetoCSV(result_statistic.statistic, newFileName, headers) #writes the chi-squared test statistic to file to be sent to Java
+    #we also have calculated p-values, we may want to send those too
 
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
