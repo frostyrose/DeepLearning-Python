@@ -19,7 +19,23 @@ def chiSquaredTest(dataFile):
     print f_obs
     result_statistic, pvals = Stats.chisquare(f_obs)
 
-    newFileName = "results/" + "filename-placeholder" #we can come up with a more formal scheme later
-    du.writetoCSV(result_statistic, newFileName, headers)
+    def writeOut(rStat, pVal, filename,headers=[]):
+
+        with open(filename + '.csv', 'w') as f:
+            if len(headers)!=0:
+                for i in range(len(headers)-1):
+                    f.write(str(headers[i]) + ',')
+                f.write(str(headers[-1])+'\n')
+                for j in range(len(rStat)-1):
+                    f.write(str(rStat[j]) + ',')
+                f.write(str(rStat[-1]) + '\n')
+                for k in range(len(pVal)-1):
+                    f.write(str(pVal[k]) + ',')
+                f.write(str(pVal[-1]) + '\n')
+        f.close()
+
+    newFileName = "Results/" + dataFile #using dataFile again as a convenient filename
+    writeOut(result_statistic, pvals, newFileName, headers)
+
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
