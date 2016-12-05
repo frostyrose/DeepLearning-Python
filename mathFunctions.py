@@ -15,8 +15,8 @@ def downloadFileFromJavaFTPServer(dataFile):
 
 def chiSquaredTest(dataFile):
     filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
-    f_obs, headers = du.loadCSVwithHeaders(filename)
-
+    f_obs, headers = du.loadFloatCSVwithHeaders(filename)
+    print f_obs
     result_statistic, pvals = Stats.chisquare(f_obs)
 
     newFileName = "results/" + "filename-placeholder" #we can come up with a more formal scheme later
