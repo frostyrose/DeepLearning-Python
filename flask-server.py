@@ -1,6 +1,6 @@
 #import urllib3
 import RNN
-from mathFuctions import *
+from mathFunctions import *
 from flask import Flask
 
 app = Flask(__name__)
