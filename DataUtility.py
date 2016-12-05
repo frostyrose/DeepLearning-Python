@@ -116,6 +116,14 @@ def loadCSVwithHeaders(filename):
     data = np.delete(data, 0, 0)
     return data,headers
 
+def loadFloatCSVwithHeaders(filename):
+    data = loadCSV(filename)
+    data = [x[:-1] for x in data] #trim off last element of each row since they are empty strings
+    headers = np.array(data[0])
+    data = np.array(data[1:])
+    #data = np.delete(data, 0, 0)
+    return data,headers
+
 def readHeadersCSV(filename):
     with open(filename, 'r') as f:
         for line in f.readlines():
@@ -432,5 +440,3 @@ def lock():
 def unlock():
     global lock
     lock.release()
-
-
