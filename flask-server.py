@@ -9,11 +9,6 @@ app = Flask(__name__)
 def hello_world():
     return 'Hello, World!'
 
-# @app.route('/RNN/<filename>')
-# def setFile(filename):
-#     test("resources/"+filename,"RNN.pickle")
-#     return "Accessing File: %s" % filename
-
 
 @app.route('/TEST/<pickleFile>/<dataFile>')
 def runTest(pickleFile, dataFile):

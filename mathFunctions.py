@@ -8,10 +8,10 @@ def downloadFileFromJavaFTPServer(dataFile):
     # Should Open and Read in the Data File
     url = "ftp://Cameron@127.0.0.1:21/" + dataFile #'D:/Users/Cameron/Documents/GitHub/ALI-DataDumper/' + dataFile
     print "Grabbing File at: " + url
-    urllib.urlretrieve(url, 'resources/'+dataFile)
+    urllib.urlretrieve(url, 'Resources/'+dataFile)
 
 
-    return "resources/" + dataFile #return location of locally saved file
+    return "Resources/" + dataFile #return location of locally saved file
 
 def chiSquaredTest(dataFile):
     filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
