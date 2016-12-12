@@ -85,7 +85,7 @@ def loadCSV(filename):
                     name[j] = float(name[j])
                 except ValueError:
                     # do nothing constructive
-                    print "ValueError: " + str(j)
+                    # print "ValueError: " + str(j)
                     name[j] = name[j]
             csvarr.append(name)
 

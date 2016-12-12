@@ -14,14 +14,14 @@ def downloadFileFromJavaFTPServer(dataFile):
     return "Resources/" + dataFile #return location of locally saved file
 
 def chiSquaredTest(dataFile):
-    filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
     f_obs, headers = du.loadFloatCSVwithHeaders(filename)
     print f_obs
     result_statistic, pvals = Stats.chisquare(f_obs)
 
     def writeOut(rStat, pVal, filename,headers=[]):
 
-        with open(filename + '.csv', 'w') as f:
+        with open(filename, 'w') as f:
             if len(headers)!=0:
                 for i in range(len(headers)-1):
                     f.write(str(headers[i]) + ',')
@@ -34,7 +34,7 @@ def chiSquaredTest(dataFile):
                 f.write(str(pVal[-1]) + '\n')
         f.close()
 
-    newFileName = "Results/" + dataFile #using dataFile again as a convenient filename
+    newFileName = "/home/ali/Results/" + dataFile #using dataFile again as a convenient filename
     writeOut(result_statistic, pvals, newFileName, headers)
 
 

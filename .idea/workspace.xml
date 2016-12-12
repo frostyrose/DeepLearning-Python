@@ -4,10 +4,7 @@
     <bookmark url="file://$PROJECT_DIR$/RNN.py" line="885" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6681ef86-7044-4f94-8bb3-9a816b079ebe" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask-server.py" afterPath="$PROJECT_DIR$/flask-server.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mathFunctions.py" afterPath="$PROJECT_DIR$/mathFunctions.py" />
-    </list>
+    <list default="true" id="6681ef86-7044-4f94-8bb3-9a816b079ebe" name="Default" comment="" />
     <ignored path="DeepLearning.iws" />
     <ignored path=".idea/workspace.xml" />
     <ignored path=".idea/dataSources.local.xml" />

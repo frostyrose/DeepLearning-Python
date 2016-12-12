@@ -12,7 +12,7 @@ def hello_world():
 
 @app.route('/TEST/<pickleFile>/<dataFile>')
 def runTest(pickleFile, dataFile):
-    dataFile2 = "Dataset/" + dataFile
+    dataFile2 = "/home/ubuntu/DeepLearning-Python/Dataset/" + dataFile
     pickleFile2 = pickleFile + ".pickle"
     print dataFile2
     print pickleFile
