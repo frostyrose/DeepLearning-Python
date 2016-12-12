@@ -31,6 +31,8 @@ def runMath(testType, dataFile):
     if str(testType) == "chisquared":
         chiSquaredTest(dataFile)
     # ADD ADDITIONAL CASES FOR ADDITIONAL TESTS
+    if str(testType) == "anova":
+        anova(dataFile)
     else:
         return ("No Valid Test Selected")
     return ("Running " + testType + " on the " + dataFile + " data.")

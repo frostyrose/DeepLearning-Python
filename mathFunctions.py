@@ -2,6 +2,7 @@ import scipy.stats as Stats
 import DataUtility as du
 import urllib3
 import urllib
+import numpy as np
 
 
 def downloadFileFromJavaFTPServer(dataFile):
@@ -37,5 +38,42 @@ def chiSquaredTest(dataFile):
     newFileName = "/home/ali/Results/" + dataFile #using dataFile again as a convenient filename
     writeOut(result_statistic, pvals, newFileName, headers)
 
+
+    return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
+
+def anova(dataFile):
+    '''
+    Takes in data from a CSV as such:
+    HEADER1 | HEADER2 | HEADER3 | ... | HEADERN
+    Val1a   | Val2a   | Val3a   | ... | ValNa
+    Val1b   | Val2b   | Val3b   | ... | ValNb
+    .....   | .....   | .....   | ... | ...
+    Val1x   | Val2x   | Val3x   | ... | ValNx
+
+    ANOVA will compare the means of all headers in the data file.
+    '''
+    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    dataValues, headers = du.loadFloatCSVwithHeaders(filename)
+    print dataValues
+
+    #transpose data here, such that each row will be the data points for each heading
+    #this simplifies the passing of the data in to Stats.f_oneway()
+    np.transpose(dataValues)
+    fStat, pValue = Stats.f_oneway(*dataValues)
+
+    def writeOut(f, p, filename):
+
+        with open(filename, 'w') as f:
+            f.write("FValue" + ',')
+            f.write("PValue" + '\n')
+            f.write(str(f) + ',')
+            f.write(str(p) + '\n' )
+        f.close()
+
+    newFileName = "/home/ali/Results/" + dataFile #using dataFile again as a convenient filename
+    writeOut(fStat, pValue, newFileName)
+    #output will be in the form:
+    # FValue | pValue
+    # Fstat  | pval
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
