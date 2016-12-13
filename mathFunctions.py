@@ -54,7 +54,6 @@ def anova(dataFile):
     '''
     filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
     dataValues, headers = du.loadFloatCSVwithHeaders(filename)
-    print dataValues
 
     #transpose data here, such that each row will be the data points for each heading
     #this simplifies the passing of the data in to Stats.f_oneway()
@@ -75,5 +74,39 @@ def anova(dataFile):
     #output will be in the form:
     # FValue | pValue
     # Fstat  | pval
+
+    return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
+
+def ttest(dataFile, testVer):
+    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    dataValues, headers = du.loadFloatCSVwithHeaders(filename)
+
+    #transpose data here, such that each row will be the data points for each heading
+    np.transpose(dataValues)
+    if not len(dataValues) == 2:
+        print "ERROR-Input is invalid"
+        return filename
+    sample1 = dataValues[0]
+    sample2 = dataValues[1]
+
+    if testVer == 1:
+        tStat, pValue = Stats.ttest_ind(sample1, sample2)
+    if testVer == 2:
+        tStat, pValue = Stats.ttest_ind(sample1, sample2, equal_var=False)
+    if testVer == 3:
+        tStat, pValue = Stats.ttest_rel(sample1, sample2)
+
+
+    def writeOut(t, p, filename):
+
+        with open(filename, 'w') as f:
+            f.write("TStat" + ',')
+            f.write("PValue" + '\n')
+            f.write(str(t) + ',')
+            f.write(str(p) + '\n' )
+        f.close()
+
+    newFileName = "/home/ali/Results/" + dataFile #using dataFile again as a convenient filename
+    writeOut(fStat, pValue, newFileName)
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java

@@ -33,6 +33,13 @@ def runMath(testType, dataFile):
     # ADD ADDITIONAL CASES FOR ADDITIONAL TESTS
     if str(testType) == "anova":
         anova(dataFile)
+    if str(testType) == "ttestInd":
+        ttest(dataFile, 1)
+    if str(testType) == "ttestIndWelch":
+        ttest(dataFile, 2)
+    if str(testType) == "ttestRel":
+        ttest(dataFile, 3)
+
     else:
         return ("No Valid Test Selected")
     return ("Running " + testType + " on the " + dataFile + " data.")
