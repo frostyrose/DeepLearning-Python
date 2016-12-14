@@ -28,9 +28,10 @@ def runTraining(testType,filename):
 
 @app.route('/MATH/<testType>/<dataFile>')
 def runMath(testType, dataFile):
-    if str(testType) == "chisquared":
+    if str(testType) == "chisquared1":
         chiSquaredTest(dataFile)
-    # ADD ADDITIONAL CASES FOR ADDITIONAL TESTS
+    if str(testType) == "chisquared2":
+        chi2(dataFile)
     if str(testType) == "anova":
         anova(dataFile)
     if str(testType) == "ttestInd":

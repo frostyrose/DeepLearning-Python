@@ -41,6 +41,27 @@ def chiSquaredTest(dataFile):
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
 
+def chi2(dataFile):
+    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    dataValues, headers = du.loadFloatCSVwithHeaders(filename)
+
+    x2, pValue, dof, exp  = Stats.chi2_contingency(dataValues)
+
+
+    def writeOut(x2, p, filename):
+
+        with open(filename, 'w') as f:
+            f.write("X^2" + ',')
+            f.write("PValue" + '\n')
+            f.write(str(x2) + ',')
+            f.write(str(p) + '\n' )
+        f.close()
+
+    newFileName = "/home/ali/Results/" + dataFile #using dataFile again as a convenient filename
+    writeOut(x2, pValue, newFileName)
+
+    return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
+
 def anova(dataFile):
     '''
     Takes in data from a CSV as such:
