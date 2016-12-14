@@ -107,6 +107,6 @@ def ttest(dataFile, testVer):
         f.close()
 
     newFileName = "/home/ali/Results/" + dataFile #using dataFile again as a convenient filename
-    writeOut(fStat, pValue, newFileName)
+    writeOut(tStat, pValue, newFileName)
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
