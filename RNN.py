@@ -3,10 +3,8 @@ import theano
 import theano.tensor as T
 import lasagne
 import time
-import sys
 from lasagne.layers import *
 import DataUtility as du
-import pickleUtility as pu
 
 
 class RNN:
@@ -17,7 +15,8 @@ class RNN:
                                           allow_input_downcast=True)
 
     @staticmethod
-    def build_sequences(data, primary_column, secondary_column, covariate_columns, label_columns):
+    def build_sequences(data, primary_column, secondary_column, covariate_columns, label_columns,
+                        one_hot_labels=False, exclude_unlabeled=True):
         pdata = []
         labels = []
         primary_group = []
@@ -25,10 +24,30 @@ class RNN:
         # if data is not null, build the dataset
         if data is not None:
             data = du.transpose(data)
+
+            if one_hot_labels:
+                assert len(label_columns) == 1
+
+                numerated = du.numerate(data[label_columns[0]], ignore=[''])
+                one_hot = np.zeros([int(np.nanmax(numerated)) + 1, len(numerated)])
+
+                for i in range(0, len(numerated)):
+                    if np.isnan(numerated[i]):
+                        for j in range(0, len(one_hot)):
+                            one_hot[j][i] = float('nan')
+                    else:
+                        one_hot[numerated[i]][i] = 1
+
+                        label_columns = []
+                cols = len(data)
+                for i in range(0, len(one_hot)):
+                    data.append(one_hot[i].tolist())
+                    label_columns.append(cols + i)
+
             for i in range(0, len(covariate_columns)):
                 for j in range(0, len(data[i])):
                     data[covariate_columns[i]][j] = float(data[covariate_columns[i]][j])
-                    # data[covariate_columns[i]] = du.normalize(data[covariate_columns[i]],method="zscore")
+
             data = du.transpose(data)
             primary = du.unique(du.transpose(data)[primary_column])
 
@@ -72,13 +91,119 @@ class RNN:
 
         data = []
         label = []
+        group = []
+        for i in range(0, len(pdata)):
+            if len(pdata[i]) == 0 or (exclude_unlabeled and np.sum(labels[i]) == 0):
+                continue
+            data.append(pdata[i])
+            label.append(labels[i])
+            group.append(primary_group[i])
+
+        return np.array(data), np.array(label), group
+
+    @staticmethod
+    def build_sequences_with_next_problem_label(data, primary_column, secondary_column, covariate_columns,
+                                                label_columns,one_hot_labels=False):
+        pdata = []
+        labels = []
+        primary_group = []
+
+        # if data is not null, build the dataset
+        if data is not None:
+            data = du.convert_to_floats(data)
+
+            if one_hot_labels:
+                assert len(label_columns) == 1
+                data = du.transpose(data)
+
+                numerated = du.numerate(data[label_columns[0]],ignore=[''])
+                one_hot = np.zeros([int(np.nanmax(numerated))+1,len(numerated)])
+
+                for i in range(0,len(numerated)):
+                    if np.isnan(numerated[i]):
+                        for j in range(0,len(one_hot)):
+                            one_hot[j][i] = float('nan')
+                    else:
+                        one_hot[numerated[i]][i] = 1
+
+                        label_columns = []
+                cols = len(data)
+                for i in range(0,len(one_hot)):
+                    data.append(one_hot[i].tolist())
+                    label_columns.append(cols + i)
+
+                data = du.transpose(data)
+
+            primary = du.unique(du.transpose(data)[primary_column])
+            # for each user...
+            for i in range(0, len(primary)):
+                p_set = du.select(data, primary[i], '==', primary_column)
+                secondary = du.unique(du.transpose(p_set)[secondary_column])
+
+                for j in range(0, len(secondary)):
+                    s_set = du.select(p_set, secondary[j], '==', secondary_column)
+                    timesteps = []
+                    ts_labels = []
+
+                    con = 0
+                    for k in range(0, len(s_set) - 1):
+                        valid = True
+                        for m in range(0, len(covariate_columns)):
+                            try:
+                                cov = float(s_set[k][covariate_columns[m]])
+                            except ValueError:
+                                valid = False
+                                break
+                        for m in range(0, len(label_columns)):
+                            if np.isnan(s_set[k + 1][label_columns[m]]):
+                                valid = False
+                                break
+                            try:
+                                cov = float(s_set[k + 1][label_columns[m]])
+                            except ValueError:
+                                valid = False
+                                break
+                        if not valid:
+                            break
+                        else:
+                            step = []
+                            for m in range(0, len(covariate_columns)):
+                                step.append(float(s_set[k][covariate_columns[m]]))
+
+                            timesteps.append(np.array(step))
+
+                            lbl = []
+                            for m in range(0, len(label_columns)):
+                                lbl.append(float(s_set[k + 1][label_columns[m]]))
+
+                            ts_labels.append(np.array(lbl))
+
+                    pdata.append(np.array(timesteps))
+                    labels.append(np.array(ts_labels))
+                    primary_group.append(primary[i])
+            pdata = np.array(pdata)
+            labels = np.array(labels)
+
+            # save the dataset for easy loading
+            np.save('timeseries_data.npy', pdata)
+            np.save('timeseries_labels.npy', labels)
+            np.save('timeseries_groups.npy', primary_group)
+        else:
+            pdata = np.load('timeseries_data.npy')
+            labels = np.load('timeseries_labels.npy')
+            primary_group = np.load('timeseries_groups.npy')
+
+        data = []
+        label = []
+        group = []
         for i in range(0, len(pdata)):
             if len(pdata[i]) == 0:
                 continue
             data.append(pdata[i])
             label.append(labels[i])
+            group.append(primary_group[i])
 
-        return np.array(data), np.array(label), primary_group
+        return np.array(data), np.array(label), np.array(group)
 
     @staticmethod
     def load_unlabeled_data(filename, primary_column, secondary_column, covariate_columns, load_from_file=False):
@@ -95,32 +220,43 @@ class RNN:
             print 'Skipping dataset loading - using cached data instead'
 
         print '\ntransforming data to time series...'
-        pdata, labels, grouping = RNN.build_sequences(data, primary_column, secondary_column, covariate_columns, [1, 2])
+        pdata, labels, grouping = RNN.build_sequences(data, primary_column, secondary_column, covariate_columns, [1, 2],
+                                                      exclude_unlabeled=False)
 
         print '\nDataset Info:'
         print 'number of samples:', len(pdata)
         print 'sequence length of first sample:', len(pdata[0])
         print 'input nodes: ', len(pdata[0][0])
 
-        return pdata, labels, grouping
+        return pdata, grouping
 
     @staticmethod
-    def load_data(filename, primary_column, secondary_column, covariate_columns, label_columns, load_from_file=False):
+    def load_data(filename, primary_column, secondary_column, covariate_columns, label_columns,
+                  use_next_timestep_label=False, one_hot_labels=False, load_from_file=False, limit=None):
         # load from file or rebuild dataset
         load = load_from_file
 
         data = None
         if not load:
-            data, headers = du.loadCSVwithHeaders(filename)
+            data, headers = du.loadCSVwithHeaders(filename,limit)
 
             for i in range(0, len(headers)):
                 print '{:>2}:  {:<18} {:<12}'.format(str(i), headers[i], data[0][i])
         else:
             print 'Skipping dataset loading - using cached data instead'
 
+            headers = du.readHeadersCSV(filename)
+            for i in range(0, len(headers)):
+                print '{:>2}:  {:<18}'.format(str(i), headers[i])
+
         print '\ntransforming data to time series...'
-        pdata, labels, grouping = RNN.build_sequences(data, primary_column, secondary_column, covariate_columns,
-                                                      label_columns)
+        if use_next_timestep_label:
+            pdata, labels, grouping = RNN.build_sequences_with_next_problem_label(data, primary_column,
+                                                                                  secondary_column, covariate_columns,
+                                                                                  label_columns, one_hot_labels)
+        else:
+            pdata, labels, grouping = RNN.build_sequences(data, primary_column, secondary_column, covariate_columns,
+                                                          label_columns, one_hot_labels, exclude_unlabeled=True)
 
         print '\nDataset Info:'
         print 'number of samples:', len(pdata)
@@ -191,6 +327,374 @@ class RNN:
             print "   " + label_names[i] + ":", "{:<6}".format(np.nansum(np.array(labels[i]))), \
                 "({0:.0f}%)".format((float(np.nansum(np.array(labels[i]))) / len(labels[i])) * 100)
 
+    @staticmethod
+    def build_label_mask(sequence_labels, num_output):
+        mask = []
+        # nseq = np.array(sequence_labels)
+        for i in sequence_labels:
+            if i is None or len(i) == 0 or np.nansum(i) == 0:
+                mask.append([0 for j in range(0,num_output)])
+            else:
+                mask.append([1 for j in range(0,num_output)])
+        return np.array(mask)
+
+    @staticmethod
+    def weighted_crossentropy(predictions, targets, weights_per_label):
+        # implementation derived from the following source:
+        # http://stackoverflow.com/questions/39412051/how-to-implement-weighted-binary-crossentropy-on-theano
+
+        # Copy the tensor
+        tgt = targets.copy("tgt")
+        newshape = (T.shape(tgt)[0],)
+        tgt = T.reshape(tgt, newshape)
+
+        # Make it an integer.
+        tgt = T.cast(tgt, 'int32')
+
+        # weights_per_label = theano.shared(lasagne.utils.floatX([0.2, 0.4]))
+
+        weights = weights_per_label[tgt]  # returns a targets-shaped weight matrix
+        loss = lasagne.objectives.aggregate(T.nnet.categorical_crossentropy(predictions, tgt), weights=weights)
+
+        return loss
+
+    @staticmethod
+    def train_on_batch(RNN_model,training_batch,training_batch_labels,covariates=None):
+        training_cpy = list(training_batch)
+        if covariates is None and RNN_model.covariates is None:
+            RNN_model.num_input = du.len_deepest(training_cpy)
+            RNN_model.covariates = range(0,RNN_model.num_input)
+        elif covariates is not None:
+            assert type(covariates) is list
+            assert max(covariates) < du.len_deepest(training_cpy)
+            assert min(covariates) >= 0
+            RNN_model.covariates = du.unique(covariates)
+            RNN_model.num_input = len(RNN_model.covariates)
+            for a in range(0, len(training_cpy)):
+                if type(training_cpy[a]) is not list:
+                    training_cpy[a] = training_cpy[a].tolist()
+                for e in range(0, len(training_cpy[a])):
+                    c = []
+                    for i in range(0, len(RNN_model.covariates)):
+                        c.append(training_batch[a][e][RNN_model.covariates[i]])
+                    training_cpy[a][e] = c
+
+                RNN_model.num_output = du.len_deepest(training_batch_labels)
+        else:
+            assert max(RNN_model.covariates) < du.len_deepest(training_cpy)
+            assert min(RNN_model.covariates) >= 0
+            RNN_model.num_input = len(RNN_model.covariates)
+            for a in range(0, len(training_cpy)):
+                if type(training_cpy[a]) is not list:
+                    training_cpy[a] = training_cpy[a].tolist()
+                for e in range(0, len(training_cpy[a])):
+                    c = []
+                    for i in range(0, len(RNN_model.covariates)):
+                        c.append(training_batch[a][e][RNN_model.covariates[i]])
+                    training_cpy[a][e] = c
+
+                RNN_model.num_output = du.len_deepest(training_batch_labels)
+
+        if not RNN_model.isBuilt:
+            RNN_model.build_network()
+
+        RNN.isTrained = True
+
+        t_tr = du.transpose(RNN.flatten_sequence(training_cpy))
+
+        if len(RNN_model.cov_mean) == 0:
+            RNN_model.cov_mean = []
+            RNN_model.cov_stdev = []
+
+            for a in range(0, len(t_tr)):
+                mn = np.nanmean(t_tr[a])
+                sd = np.nanstd(t_tr[a])
+                RNN_model.cov_mean.append(mn)
+                RNN_model.cov_stdev.append(sd)
+
+        training_samples = []
+
+        import math
+        for a in range(0, len(training_cpy)):
+            sample = []
+            for e in range(0, len(training_cpy[a])):
+                covar = []
+                for i in range(0, len(training_cpy[a][e])):
+                    cov = 0
+                    if RNN_model.cov_stdev[i] == 0:
+                        cov = 0
+                    else:
+                        cov = (training_cpy[a][e][i] - RNN_model.cov_mean[i]) / RNN_model.cov_stdev[i]
+
+                    if math.isnan(cov) or math.isinf(cov):
+                        cov = 0
+
+                    covar.append(cov)
+                sample.append(covar)
+            training_samples.append(sample)
+
+        label_train = training_batch_labels
+
+        label_distribution = RNN.get_label_distribution(label_train)
+        RNN_model.majorityclass = label_distribution.index(np.nanmax(label_distribution))
+
+        rep_training = np.array(training_samples)
+        rep_label_train = np.array(label_train)
+
+        epoch = 0
+        n_train = 0
+
+
+        for i in range(0, len(rep_training), len(training_batch)):
+            batch_cost = []
+            # get the cost of each sequence in the batch
+            for j in range(i, min(len(rep_training) - 1, i + len(training_batch) - 1)):
+                batch_cost.append(RNN_model.train_RNN_no_update([rep_training[j]], rep_label_train[j]))
+
+            j = min(len(rep_training) - 1, i + len(training_batch) - 1)
+
+            epoch += RNN_model.train_RNN_update([rep_training[j]], rep_label_train[j],
+                                                batch_cost, len(training_batch))
+
+            n_train += 1
+
+        RNN_model.RNN_train_err.append(epoch / n_train)
+
+    @staticmethod
+    def train_on_epoch(RNN_model, training_batch, training_batch_labels,batch_size = 10, covariates=None):
+        training_cpy = list(training_batch)
+        if covariates is None and RNN_model.covariates is None:
+            RNN_model.num_input = du.len_deepest(training_cpy)
+            RNN_model.covariates = range(0, RNN_model.num_input)
+        elif covariates is not None:
+            assert type(covariates) is list
+            assert max(covariates) < du.len_deepest(training_cpy)
+            assert min(covariates) >= 0
+            RNN_model.covariates = du.unique(covariates)
+            RNN_model.num_input = len(RNN_model.covariates)
+            for a in range(0, len(training_cpy)):
+                if type(training_cpy[a]) is not list:
+                    training_cpy[a] = training_cpy[a].tolist()
+                for e in range(0, len(training_cpy[a])):
+                    c = []
+                    for i in range(0, len(RNN_model.covariates)):
+                        c.append(training_batch[a][e][RNN_model.covariates[i]])
+                    training_cpy[a][e] = c
+
+                RNN_model.num_output = du.len_deepest(training_batch_labels)
+        else:
+            assert max(RNN_model.covariates) < du.len_deepest(training_cpy)
+            assert min(RNN_model.covariates) >= 0
+            RNN_model.num_input = len(RNN_model.covariates)
+            for a in range(0, len(training_cpy)):
+                if type(training_cpy[a]) is not list:
+                    training_cpy[a] = training_cpy[a].tolist()
+                for e in range(0, len(training_cpy[a])):
+                    c = []
+                    for i in range(0, len(RNN_model.covariates)):
+                        c.append(training_batch[a][e][RNN_model.covariates[i]])
+                    training_cpy[a][e] = c
+
+                RNN_model.num_output = du.len_deepest(training_batch_labels)
+
+        if not RNN_model.isBuilt:
+            RNN_model.build_network()
+
+        RNN.isTrained = True
+
+        t_tr = du.transpose(RNN.flatten_sequence(training_cpy))
+
+        if len(RNN_model.cov_mean) == 0:
+            RNN_model.cov_mean = []
+            RNN_model.cov_stdev = []
+
+            for a in range(0, len(t_tr)):
+                mn = np.nanmean(t_tr[a])
+                sd = np.nanstd(t_tr[a])
+                RNN_model.cov_mean.append(mn)
+                RNN_model.cov_stdev.append(sd)
+
+        training_samples = []
+
+        import math
+        for a in range(0, len(training_cpy)):
+            sample = []
+            for e in range(0, len(training_cpy[a])):
+                covar = []
+                for i in range(0, len(training_cpy[a][e])):
+                    cov = 0
+                    if RNN_model.cov_stdev[i] == 0:
+                        cov = 0
+                    else:
+                        cov = (training_cpy[a][e][i] - RNN_model.cov_mean[i]) / RNN_model.cov_stdev[i]
+
+                    if math.isnan(cov) or math.isinf(cov):
+                        cov = 0
+
+                    covar.append(cov)
+                sample.append(covar)
+            training_samples.append(sample)
+
+        label_train = training_batch_labels
+
+        label_distribution = RNN.get_label_distribution(label_train)
+        RNN_model.majorityclass = label_distribution.index(np.nanmax(label_distribution))
+
+        rep_training = np.array(training_samples)
+        rep_label_train = np.array(label_train)
+
+        epoch = 0
+        n_train = 0
+
+        for i in range(0, len(rep_training), batch_size):
+            batch_cost = []
+            # get the cost of each sequence in the batch
+            for j in range(i, min(len(rep_training) - 1, i + batch_size - 1)):
+                batch_cost.append(RNN_model.train_RNN_no_update([rep_training[j]], rep_label_train[j]))
+
+            j = min(len(rep_training) - 1, i + batch_size - 1)
+
+            epoch += RNN_model.train_RNN_update([rep_training[j]], rep_label_train[j],
+                                                batch_cost, batch_size)
+
+            n_train += 1
+
+        RNN_model.RNN_train_err.append(epoch / n_train)
+        return RNN_model
+
+    @staticmethod
+    def test_model(RNN_model,test,test_labels):
+
+        if test_labels is None:
+            return RNN_model.predict(test)
+        test_cpy = list(test)
+        if not du.len_deepest(test_cpy) == RNN_model.num_input:
+            if RNN_model.covariates is not None:
+                for a in range(0, len(test_cpy)):
+                    if type(test_cpy[a]) is not list:
+                        test_cpy[a] = test_cpy[a].tolist()
+                    for e in range(0, len(test_cpy[a])):
+                        c = []
+                        for i in range(0, len(RNN_model.covariates)):
+                            c.append(test_cpy[a][e][RNN_model.covariates[i]])
+                        test_cpy[a][e] = c
+
+        if len(RNN_model.cov_mean) == 0 or len(RNN_model.cov_stdev) == 0:
+            t_tr = du.transpose(RNN.flatten_sequence(test_cpy))
+            RNN_model.cov_mean = []
+            RNN_model.cov_stdev = []
+
+            for a in range(0, len(t_tr)):
+                mn = np.nanmean(t_tr[a])
+                sd = np.nanstd(t_tr[a])
+                RNN_model.cov_mean.append(mn)
+                RNN_model.cov_stdev.append(sd)
+
+        test_samples = []
+
+        import math
+        for a in range(0, len(test_cpy)):
+            sample = []
+            for e in range(0, len(test_cpy[a])):
+                covariates = []
+                for i in range(0, len(test_cpy[a][e])):
+                    cov = 0
+                    if RNN_model.cov_stdev[i] == 0:
+                        cov = 0
+                    else:
+                        cov = (test_cpy[a][e][i] - RNN_model.cov_mean[i]) / RNN_model.cov_stdev[i]
+
+                    if math.isnan(cov) or math.isinf(cov):
+                        cov = 0
+
+                    covariates.append(cov)
+                sample.append(covariates)
+            test_samples.append(sample)
+
+        label_test = test_labels
+
+        classes = []
+        p_count = 0
+
+        avg_class_err = []
+        avg_err_RNN = []
+
+
+        predictions_RNN = []
+        for i in range(0, len(test_samples)):
+            # get the prediction and calculate cost
+            prediction_RNN = RNN_model.pred_RNN([test_samples[i]])
+            # prediction_RNN += .5-self.avg_preds
+            if RNN_model.scale_output:
+                prediction_RNN -= RNN_model.min_preds
+                prediction_RNN /= (RNN_model.max_preds - RNN_model.min_preds)
+                prediction_RNN = np.clip(prediction_RNN, 0, 1)
+                prediction_RNN = [(x * [1 if c == RNN_model.majorityclass else 0.9999 for c in range(0, RNN_model.num_output)])
+                                  if np.sum(x) == 4 else x for x in prediction_RNN]
+            avg_err_RNN.append(RNN_model.compute_cost_RNN([test_samples[i]], label_test[i]))
+
+            for j in range(0, len(label_test[i])):
+                p_count += 1
+
+                classes.append(label_test[i][j].tolist())
+                predictions_RNN.append(prediction_RNN[j].tolist())
+
+        predictions_RNN = np.round(predictions_RNN, 3).tolist()
+
+        actual = []
+        pred_RNN = []
+        cor_RNN = []
+
+        # get the percent correct for the predictions
+        # how often the prediction is right when it is made
+        for i in range(0, len(predictions_RNN)):
+            c = classes[i].index(max(classes[i]))
+            actual.append(c)
+
+            p_RNN = predictions_RNN[i].index(max(predictions_RNN[i]))
+            pred_RNN.append(p_RNN)
+            cor_RNN.append(int(c == p_RNN))
+
+        # calculate a naive baseline using averages
+        flattened_label = []
+        for i in range(0, len(label_test)):
+            for j in range(0, len(label_test[i])):
+                flattened_label.append(label_test[i][j])
+        flattened_label = np.array(flattened_label)
+
+        from sklearn.metrics import roc_auc_score, f1_score
+        from skll.metrics import kappa
+
+        kpa = []
+        auc = []
+        f1s = []
+        apr = []
+        t_pred = du.transpose(predictions_RNN)
+        t_lab = du.transpose(flattened_label)
+
+        for i in range(0, len(t_lab)):
+            # if i == 0 or i == 3:
+            #    t_pred[i] = du.normalize(t_pred[i],method='max')
+            temp_p = [round(j) for j in t_pred[i]]
+
+            try:
+                kpa.append(kappa(t_lab[i], t_pred[i]))
+                apr.append(du.Aprime(t_lab[i], t_pred[i]))
+                auc.append(roc_auc_score(t_lab[i], t_pred[i]))
+            except ValueError as e:
+                RNN_model.eval_metrics = [float('NaN'),float('NaN'),float('NaN'),float('NaN'),float('NaN')]
+                return predictions_RNN
+
+            if np.nanmax(temp_p) == 0:
+                f1s.append(0)
+            else:
+                f1s.append(f1_score(t_lab[i], temp_p))
+
+                RNN_model.eval_metrics = [np.nanmean(avg_err_RNN), np.nanmean(auc), np.nanmean(kpa),
+                             np.nanmean(f1s), np.nanmean(cor_RNN) * 100]
+
+        return RNN_model
+
     def __init__(self, variant="RNN"):
         self.training = []
         self.cov_mean = []
@@ -208,16 +712,30 @@ class RNN:
         self.batch_size = 10
         self.num_folds = 2
         self.num_epochs = 20
-        self.dropout1 = 0.6
-        self.dropout2 = 0.6
+        self.dropout1 = 0.3
+        self.dropout2 = 0.3
+
+        self.network_output = T.matrix('network_output')
+        self.target_values = T.matrix('target_output')
+        self.label_mask = T.matrix('target_mask')
+        self.cost_vector = T.dvector('cost_list')
+        self.num_elements = T.dscalar('batch_size')
+        self.entropy_weights = None
+
+        self.covariates = None
 
         self.min_preds = [1,1,1,1]
         self.min_preds = [0,0,0,0]
         self.avg_preds = [0.5,0.5,0.5,0.5]
 
         self.eval_metrics = ['NA', 'NA', 'NA', 'NA', 'NA']
+        self.kappa_threshold = []
 
         self.l_in = None
+        self.l_AE_drop = None
+        self.l_AE_hidden = None
+        self.l_AE_inverse = None
+        self.l_norm = None
         self.l_drop1 = None
         self.l_Recurrent = None
         self.l_reshape_RNN = None
@@ -225,27 +743,40 @@ class RNN:
         self.l_drop2 = None
         self.l_output_RNN = None
 
-        self.target_values = T.matrix('target_output')
-        self.cost_vector = T.dvector('cost_list')
-        self.num_elements = T.dscalar('batch_size')
-
         self.network_output_RNN = None
-        self.network_reshape_RNN = None
+        self.network_output_RNN_test = None
+        self.autoencoder_hidden = None
         self.cost_RNN = None
         self.all_params_RNN = None
-        self.updates_adhoc = None
+        self.updates_adagrad = None
+        self.updates_adam = None
+        self.updates_adadelta = None
+        self.updates_nesterov = None
         self.compute_cost_RNN = None
         self.pred_RNN = None
-        self.rshp_RNN = None
         self.train_RNN_no_update = None
         self.train_RNN_update = None
+        self.train_AE_update = None
+        self.train_predict_update = None
+
+        self.RNN_train_err = []
+        self.RNN_val_err = []
+
+        self.max_preds = 1
+        self.min_preds = 0
 
         self.train_validation_RNN = [['RNN Training Error'], ['RNN Validation Error']]
 
         self.isBuilt = False
         self.isInitialized = False
+
+        self.isTrained = False
+        self.trained_epoch = 0
+
         self.balance = False
         self.scale_output = False
+        self.early_stop = False
+        self.use_autoencoder = False
         self.majorityclass = 0
 
     def set_hyperparams(self,num_recurrent, step_size=.01, dropout1=0.0,
@@ -259,13 +790,15 @@ class RNN:
         self.dropout2=dropout2
         self.isBuilt = False
 
-    def set_training_params(self, batch_size, num_epochs, balance=False, scale_output=False, num_folds=None):
+    def set_training_params(self, batch_size, num_epochs, balance=False, scale_output=False, early_stop=False,
+                            num_folds=None):
         self.batch_size = batch_size
         self.num_epochs = num_epochs
         if num_folds is not None:
             self.num_folds = num_folds
         self.balance = balance
         self.scale_output = scale_output
+        self.early_stop = early_stop
 
     def save_parameters(self, filename_no_ext):
         all_params = lasagne.layers.get_all_params(self.l_output_RNN)
@@ -280,7 +813,12 @@ class RNN:
             p.set_value(v)
 
     def build_network(self):
-        print("\nBuilding Network...")
+        verbose = False
+        import time
+        print '\nBuilding Network...'
+        if verbose:
+            print '\nDefining Network Structure...'
+        start = time.clock()
 
         if not self.isInitialized:
             # Recurrent network structure
@@ -292,99 +830,221 @@ class RNN:
                                                            grad_clipping=100.)
             elif self.variant == "LSTM" or self.variant == "lstm":
                 self.l_Recurrent = lasagne.layers.LSTMLayer(self.l_drop1, self.num_units, precompute_input=True,
-                                                           grad_clipping=100.)
+                                                            grad_clipping=100.,
+                                                            #forgetgate=Gate(b=lasagne.init.Constant(5)),
+                                                            peepholes=False)
             else:
                 self.l_Recurrent = lasagne.layers.RecurrentLayer(self.l_drop1, self.num_units, precompute_input=True,
                                                            grad_clipping=100.)
+
             self.l_reshape_RNN = lasagne.layers.ReshapeLayer(self.l_Recurrent, shape=(-1, self.num_units))
             self.l_relu = lasagne.layers.RandomizedRectifierLayer(self.l_reshape_RNN)
             self.l_drop2 = lasagne.layers.DropoutLayer(self.l_relu,self.dropout2)
             self.l_output_RNN = lasagne.layers.DenseLayer(self.l_drop2, num_units=self.num_output,
                                                           W=lasagne.init.Normal(),
-                                                          nonlinearity=lasagne.nonlinearities.identity)
-            self.isInitialized = True
+                                                          nonlinearity=lasagne.nonlinearities.softmax)
 
+            self.isInitialized = True
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
+        if verbose:
+            print "Compiling Output Functions...",
+        start = time.clock()
         # theano variables for output
         self.network_output_RNN = lasagne.layers.get_output(self.l_output_RNN,deterministic=False)
         self.network_output_RNN_test = lasagne.layers.get_output(self.l_output_RNN, deterministic=True)
-        self.network_reshape_RNN = lasagne.layers.get_output(self.l_reshape_RNN)
 
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
+        if verbose:
+            print "Defining Cost Function...",
+        start = time.clock()
         # use cross-entropy for cost - average across the batch
-        self.cost_RNN = T.nnet.categorical_crossentropy(T.exp(self.network_output_RNN) /
-                                                        (T.exp(self.network_output_RNN).sum(1, keepdims=True)),
-                                                        self.target_values).mean()
 
+        # self.cost_RNN = T.sum(RNN.weighted_crossentropy((self.network_output_RNN * self.label_mask) + (1-self.label_mask),
+        #                                                 self.target_values + (1-self.label_mask), self.entropy_weights))
+
+        # self.cost_RNN = (2*T.sum(
+        #                     T.nnet.categorical_crossentropy((self.network_output_RNN * self.label_mask) +
+        #                                                     (1-self.label_mask),
+        #                                                     (self.target_values * self.entropy_weights) +
+        #                                                     (1-self.label_mask)))) / \
+        #                 (T.sum((self.target_values*self.entropy_weights))+(T.sum(
+        #                     T.nnet.categorical_crossentropy((self.network_output_RNN * self.label_mask) +
+        #                                                     (1-self.label_mask),
+        #                                                     (self.target_values*self.entropy_weights) +
+        #                                                     (1-self.label_mask)))))
+
+        self.cost_RNN = lasagne.objectives.aggregate(
+            T.nnet.categorical_crossentropy(self.network_output_RNN,self.target_values),
+            weights=(self.label_mask*self.entropy_weights).max(axis=1)).mean()
+
+        # lasagne.objectives.aggregate(
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
+        if verbose:
+            print "Compiling Parameter Functions...",
+        start = time.clock()
         # theano variable for network parameters for updating
         self.all_params_RNN = lasagne.layers.get_all_params(self.l_output_RNN, trainable=True)
 
-        #print("Computing updates...")
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
+        if verbose:
+            print "Compiling Update Functions...",
+        start = time.clock()
         # update the network given a list of batch costs (for batches of sequences)
-        self.updates_adhoc = lasagne.updates.adagrad((T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
+        self.updates_adagrad = lasagne.updates.adagrad((T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
                                                      self.all_params_RNN,
                                                      self.step_size)
-        #print("Compiling functions...")
+
+        self.updates_adam = lasagne.updates.adam((T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
+                                                 self.all_params_RNN,
+                                                 self.step_size)
+
+        self.updates_adadelta = lasagne.updates.adadelta((T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
+                                                 self.all_params_RNN,
+                                                 self.step_size)
+
+        self.updates_nesterov = lasagne.updates.nesterov_momentum((T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
+                                                 self.all_params_RNN,
+                                                 self.step_size)
+
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
+        if verbose:
+            print "Compiling Cost Functions...",
+        start = time.clock()
         # get the RNN cost given inputs and labels
-        self.compute_cost_RNN = theano.function([self.l_in.input_var, self.target_values],
+        self.compute_cost_RNN = theano.function([self.l_in.input_var, self.target_values, self.label_mask],
                                                 self.cost_RNN, allow_input_downcast=True)
+
         # get the prediction vector of the network given some inputs
-        self.pred_RNN_train = theano.function([self.l_in.input_var], T.exp(self.network_output_RNN) /
-                                        (T.exp(self.network_output_RNN).sum(1, keepdims=True)),
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
+        if verbose:
+            print "Compiling Prediction Functions...",
+        start = time.clock()
+        self.pred_RNN_train = theano.function([self.l_in.input_var], self.network_output_RNN,
                                         allow_input_downcast=True)
 
-        self.pred_RNN = theano.function([self.l_in.input_var], T.exp(self.network_output_RNN_test) /
-                                        (T.exp(self.network_output_RNN_test).sum(1, keepdims=True)),
+        self.pred_RNN = theano.function([self.l_in.input_var], self.network_output_RNN_test,
                                         allow_input_downcast=True)
 
-        self.rshp_RNN = theano.function([self.l_in.input_var], self.network_reshape_RNN, allow_input_downcast=True)
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
 
+        if verbose:
+            print "Compiling Training Functions...",
+        start = time.clock()
         # get the cost of the network without updating parameters (for batch updating)
-        self.train_RNN_no_update = theano.function([self.l_in.input_var, self.target_values],
+        self.train_RNN_no_update = theano.function([self.l_in.input_var, self.target_values, self.label_mask],
                                                    self.cost_RNN, allow_input_downcast=True)
+
         # get the cost of the network and update parameters based on previous costs (for batch updating)
-        self.train_RNN_update = theano.function([self.l_in.input_var, self.target_values,
+        self.train_RNN_update = theano.function([self.l_in.input_var, self.target_values, self.label_mask,
                                                  self.cost_vector, self.num_elements],
                                                 (T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
-                                                updates=self.updates_adhoc, allow_input_downcast=True)
+                                                updates=self.updates_adagrad, allow_input_downcast=True)
+
+        self.train_predict_update = theano.function([self.l_in.input_var, self.target_values, self.label_mask,
+                                                     self.cost_vector, self.num_elements],
+                                                    [(T.sum(self.cost_vector) + self.cost_RNN) / self.num_elements,
+                                                     self.network_output_RNN], updates=self.updates_adagrad,
+                                                    allow_input_downcast=True)
+
+        if verbose:
+            print '{0:.1f}s'.format(time.clock() - start)
+
         self.isBuilt = True
-        print "Network Params:", count_params(self.l_output_RNN)
 
-    def train(self, training, training_labels):
+    def train_stable(self, training, training_labels, holdout_samples = None, holdout_labels = None, covariates=None, verbose=10):
 
-        self.num_input = du.len_deepest(training)
+        training_cpy = list(training)
+
+        if holdout_samples is not None:
+            assert holdout_labels is not None
+        else:
+            assert holdout_labels is None
+
+        if covariates is None:
+            self.num_input = du.len_deepest(training_cpy)
+        else:
+            assert type(covariates) is list
+            assert max(covariates) < du.len_deepest(training_cpy)
+            assert min(covariates) >= 0
+            self.covariates = du.unique(covariates)
+            self.num_input = len(self.covariates)
+            for a in range(0,len(training_cpy)):
+                if type(training_cpy[a]) is not list:
+                    training_cpy[a] = training_cpy[a].tolist()
+                for e in range(0,len(training_cpy[a])):
+                    c = []
+                    for i in range(0,len(self.covariates)):
+                        c.append(training[a][e][self.covariates[i]])
+                    training_cpy[a][e] = c
+
         self.num_output = du.len_deepest(training_labels)
+
+        dist = 1-np.array(RNN.get_label_distribution(training_labels))
+        wt = 1 + (dist - dist.min())
+        # wt /= wt
+        # wt = 1-np.array(du.normalize(du.softmax(np.array(RNN.get_label_distribution(training_labels))))) + 1
+        # wt = [15,1,6,15]
+        # wt = np.array(du.normalize(wt))
+        # wt += 1-wt
+
+        self.entropy_weights = theano.shared(lasagne.utils.floatX(wt))
 
         if not self.isBuilt:
             self.build_network()
 
-        t_tr = du.transpose(RNN.flatten_sequence(training))
-        self.cov_mean = []
-        self.cov_stdev = []
+        self.kappa_threshold = []
+        for i in range(0,self.num_output):
+            self.kappa_threshold.append(0.5)
 
-        for a in range(0,len(t_tr)):
-            mn = np.nanmean(t_tr[a])
-            sd = np.nanstd(t_tr[a])
-            self.cov_mean.append(mn)
-            self.cov_stdev.append(sd)
+        print "Cross Entropy Class Weights:\n\t",wt
+
+        print "Network Params:", count_params(self.l_output_RNN)
+
+        t_tr = du.transpose(RNN.flatten_sequence(training_cpy))
+
+        if len(self.cov_mean) == 0:
+            self.cov_mean = []
+            self.cov_stdev = []
+
+            for a in range(0,len(t_tr)):
+                mn = np.nanmean(t_tr[a])
+                sd = np.nanstd(t_tr[a])
+                self.cov_mean.append(mn)
+                self.cov_stdev.append(sd)
 
         training_samples = []
+        # training_samples = training_cpy
 
         import math
-        for a in range(0,len(training)):
+        for a in range(0,len(training_cpy)):
             sample = []
-            for e in range(0,len(training[a])):
-                covariates = []
-                for i in range(0,len(training[a][e])):
+            for e in range(0,len(training_cpy[a])):
+                covar = []
+                for i in range(0,len(training_cpy[a][e])):
                     cov = 0
                     if self.cov_stdev[i] == 0:
                         cov = 0
                     else:
-                        cov = (training[a][e][i]-self.cov_mean[i])/self.cov_stdev[i]
+                        cov = (training_cpy[a][e][i]-self.cov_mean[i])/self.cov_stdev[i]
 
                     if math.isnan(cov) or math.isinf(cov):
                         cov = 0
 
-                    covariates.append(cov)
-                sample.append(covariates)
+                    covar.append(cov)
+                sample.append(covar)
             training_samples.append(sample)
 
         label_train = training_labels
@@ -392,30 +1052,42 @@ class RNN:
         label_distribution = RNN.get_label_distribution(label_train)
         self.majorityclass = label_distribution.index(np.nanmax(label_distribution))
 
+
         # introduce cross-validation
         from sklearn.cross_validation import KFold
         skf = KFold(len(training_samples), n_folds=self.num_folds)
 
-        print"Number of Folds:", len(skf)
+        if not self.isTrained and verbose > 2:
+            print"Number of Folds:", len(skf)
 
-        print "Training Samples (Sequences):", len(training_samples)
+            print "Training Samples (Sequences):", len(training_samples)
 
-        if self.balance:
-            print "\nTraining " + self.variant + "with Balanced Labels..."
-        else:
-            print "\nTraining " + self.variant + "..."
+            if self.balance:
+                print "\nTraining " + self.variant + " with Balanced Labels..."
+            else:
+                print "\nTraining " + self.variant + "..."
 
-        print "{:<9}".format("  Epoch"), \
-            "{:<9}".format("  Train"), \
-            "{:<9}".format("  Valid"), \
-            "{:<9}".format("  Time"), \
-            "\n======================================"
+
+            print "{:^9}".format("Epoch"), \
+                "{:^9}".format("Train"), \
+                "{:^9}".format("Val(ACE)"), \
+                "{:^9}".format("Val(AUC)"), \
+                "{:^9}".format("Val(Kpa)"), \
+                "{:^9}".format("Time"), \
+                "\n{:=^68}".format('')
+
+        self.isTrained = True
         start_time = time.clock()
-        RNN_train_err = []
-        RNN_val_err = []
+        self.RNN_train_err = []
+        self.RNN_val_err = []
         previous = 0
+
+        hold_moving = 0
+
         # for each epoch...
+        pred = []
         for e in range(0, self.num_epochs):
+            pred = []
             epoch_time = time.clock()
             epoch = 0
             eval = 0
@@ -430,6 +1102,10 @@ class RNN:
                 rep_training = np.array(fold_training)
                 rep_label_train = np.array(fold_train_labels)
 
+            # train and validate
+
+
+
                 if self.balance:
                     t_label_train = du.transpose(RNN.flatten_sequence(label_train))
                     rep = []
@@ -443,59 +1119,353 @@ class RNN:
                     batch_cost = []
                     # get the cost of each sequence in the batch
                     for j in range(i, min(len(rep_training) - 1, i + self.batch_size - 1)):
-                        batch_cost.append(self.train_RNN_no_update([rep_training[j]], rep_label_train[j]))
+                        mask = RNN.build_label_mask(rep_label_train[j], self.num_output)
+                        batch_cost.append(self.train_RNN_no_update([rep_training[j]], rep_label_train[j], mask))
 
                     j = min(len(rep_training) - 1, i + self.batch_size - 1)
 
-                    epoch += self.train_RNN_update([rep_training[j]], rep_label_train[j],
-                                                   batch_cost, self.batch_size)
+                    mask = RNN.build_label_mask(rep_label_train[j],self.num_output)
+                    # print np.nansum(rep_label_train[j]), ':', np.nansum(mask), '--',
 
-                    n_train += 1
+                    res = self.train_predict_update([rep_training[j]], rep_label_train[j], mask,
+                                                    batch_cost, self.batch_size)
 
+                    # print res[0]
+
+                    epoch += res[0]
+
+                    for k in res[1]:
+                        pred.append(k)
+                    n_train += int(res[0] > 0)
+
+                self.max_preds = np.max(pred, axis=0)
+                self.min_preds = np.min(pred, axis=0)
                 for i in range(0, len(ktest)):
                     # get the validation error
-                    eval += self.compute_cost_RNN([training_samples[ktest[i]]], label_train[ktest[i]])
-                    n_test += 1
+                    mask = RNN.build_label_mask(label_train[ktest[i]], self.num_output)
+                    c = self.compute_cost_RNN([training_samples[ktest[i]]], label_train[ktest[i]], mask)
+                    eval += c
+                    n_test += int(c > 0)
 
-            RNN_train_err.append(epoch / n_train)
-            RNN_val_err.append(eval / n_test)
-            print "{:<9}".format("Epoch " + str(e + 1) + ":"), \
-                "  {0:.4f}".format(epoch / n_train), \
-                "   {0:.4f}".format(eval / n_test), \
-                "   {0:.1f}s".format(time.clock() - epoch_time)
+            self.test(holdout_samples, holdout_labels, verbose=0, training=True)
+            eval = self.eval_metrics
+            # print r.eval_metrics
+            n_test = 1
+            # for i in range(0,len(holdout_set)):
+            #     eval = self.compute_cost_RNN([holdout_set[i]], holdout_labels[i])
+            #     n_test = 1
 
-            # if e == 0:
-            #     previous = eval/n_test
-            # else:
-            #     if eval/n_test - previous > 0.005:
-            #         break
-            #     previous = eval/n_test
+            self.RNN_train_err.append(epoch / n_train)
+
+            try:
+                self.RNN_val_err.append(float(eval[0]) / n_test)
+            except TypeError:
+                eval = [0, 0, 0, 0, 0]
+                self.RNN_val_err.append(eval[0])
+
+
+
+            if verbose > 1:
+                print "{:^9}".format("Epoch " + str(self.trained_epoch + 1) + ":"), \
+                    "{0:^9.4f}".format(epoch / n_train), \
+                    "{0:^9.4f}".format(float(eval[0]) / n_test), \
+                    "{0:^9.4f}".format(float(eval[1]) / n_test), \
+                    "{0:^9.4f}".format(float(eval[2]) / n_test), \
+                    "{:^9}".format("{0:.1f}s".format(time.clock() - epoch_time))
+                # "{0:^9.4f}".format(eval[0] / n_test), \
+                # eval = eval[0]
+
+            past_epochs = 10
+
+            if self.early_stop and len(self.RNN_train_err) > past_epochs + 1:
+                avg_train = 0
+                avg_val = 0
+
+                for i in range(0, past_epochs):
+                    avg_train += self.RNN_val_err[len(self.RNN_val_err) - 2 - i]
+                    avg_val += self.RNN_val_err[len(self.RNN_val_err) - 1 - i]
+
+                avg_train /= float(past_epochs)
+                avg_val /= float(past_epochs)
+
+                if avg_val - avg_train > 0:
+                    self.load_from_file('RNN_tmp_params')
+                    break
+
+            self.save_parameters('RNN_tmp_params')
+            self.trained_epoch += 1
+
             if math.isnan(epoch / n_train):
-                print "NaN Value found: Rebuilding Network..."
+                if verbose > 2:
+                    print "NaN Value found: Rebuilding Network..."
                 self.isBuilt = False
                 self.isInitialized = False
 
-        tmp_scaling = self.scale_output
-        self.scale_output = False
-        pred = self.predict(training)
-        self.scale_output = tmp_scaling
-
-        self.max_preds = np.max(pred,axis=0)
-        self.min_preds = np.min(pred, axis=0)
-
-        print "Total Training Time:", "{0:.1f}s".format(time.clock() - start_time)
+        if self.num_epochs > 1 and verbose > 2:
+            print "Total Training Time:", "{0:.1f}s".format(time.clock() - start_time)
 
         self.train_validation_RNN = [['RNN Training Error'], ['RNN Validation Error']]
-        for i in range(0, len(RNN_train_err)):
-            self.train_validation_RNN[0].append(str(RNN_train_err[i]))
-        for i in range(0, len(RNN_val_err)):
-            self.train_validation_RNN[1].append(str(RNN_val_err[i]))
+        for i in range(0, len(self.RNN_train_err)):
+            self.train_validation_RNN[0].append(str(self.RNN_train_err[i]))
+        for i in range(0, len(self.RNN_val_err)):
+            self.train_validation_RNN[1].append(str(self.RNN_val_err[i]))
+
+    def train(self, training, training_labels, holdout_size=.2, covariates=None, verbose=10):
+
+        training, label_train = du.shuffle(training, training_labels)
+        training, holdout_samples, training_labels, holdout_labels = du.split_training_test(training,label_train,
+                                                                                            1-holdout_size)
+        training_cpy = np.array(training)
+
+        if covariates is None:
+            covariates = range(du.len_deepest(training_cpy))
+
+        self.covariates = np.array(du.unique(covariates), dtype=int)
+        assert max(covariates) < du.len_deepest(training_cpy) and min(covariates) >= 0
+        self.num_input = len(self.covariates)
+        for a in range(0,len(training_cpy)):
+            training_cpy[a] = np.array(training_cpy[a])
+            for b in range(0,len(training_cpy[a])):
+                training_cpy[a][b] = np.array(np.array(training_cpy[a][b])[self.covariates],dtype=float)
+
+        self.num_output = du.len_deepest(training_labels)
+
+        dist = 1-np.array(RNN.get_label_distribution(training_labels))
+        wt = 1 + (dist - dist.min())
+
+        import math
+
+        t_label_train = du.transpose(RNN.flatten_sequence(label_train))
+        rep = []
+        for r in range(0, self.num_output):
+            rep.append(int(math.floor((len(t_label_train[r]) / np.nansum(t_label_train[r])) + 1)))
+
+        rep = np.array(rep,dtype=int)
+        rep /= rep.min()
+        wt = rep
+        # wt /= wt
+        # wt = 1-np.array(du.normalize(du.softmax(np.array(RNN.get_label_distribution(training_labels))))) + 1
+        # wt = [15,1,6,15]
+        # wt = np.array(du.normalize(wt))
+        # wt += 1-wt
+
+        self.entropy_weights = theano.shared(lasagne.utils.floatX(wt))
+
+        if not self.isBuilt:
+            self.build_network()
+
+        self.kappa_threshold = []
+        for i in range(0,self.num_output):
+            self.kappa_threshold.append(0.5)
+
+        print "Cross Entropy Class Weights:\n\t",wt
+
+        print "Network Params:", count_params(self.l_output_RNN)
+
+        t_tr = du.transpose(RNN.flatten_sequence(training_cpy))
+
+        if len(self.cov_mean) == 0:
+            self.cov_mean = []
+            self.cov_stdev = []
+
+            for a in range(0,len(t_tr)):
+                mn = np.nanmean(t_tr[a])
+                sd = np.nanstd(t_tr[a])
+                self.cov_mean.append(mn)
+                self.cov_stdev.append(sd)
+
+        training_samples = []
+        # training_samples = training_cpy
+
+
+        for a in range(0,len(training_cpy)):
+            sample = []
+            for e in range(0,len(training_cpy[a])):
+                covar = []
+                for i in range(0,len(training_cpy[a][e])):
+                    cov = 0
+                    if self.cov_stdev[i] == 0:
+                        cov = 0
+                    else:
+                        cov = (training_cpy[a][e][i]-self.cov_mean[i])/self.cov_stdev[i]
+
+                    if math.isnan(cov) or math.isinf(cov):
+                        cov = 0
+
+                    covar.append(cov)
+                sample.append(covar)
+            training_samples.append(sample)
+
+        label_train = training_labels
+
+        label_distribution = RNN.get_label_distribution(label_train)
+        self.majorityclass = label_distribution.index(np.nanmax(label_distribution))
+
+        if not self.isTrained and verbose > 2:
+
+            print "Training Samples (Sequences):", len(training_samples)
+
+            if self.balance:
+                print "\nTraining " + self.variant + " with Balanced Labels..."
+            else:
+                print "\nTraining " + self.variant + "..."
+
+
+            print "{:^9}".format("Epoch"), \
+                "{:^9}".format("Train"), \
+                "{:^9}".format("Moving E"), \
+                "{:^9}".format("Val(ACE)"), \
+                "{:^9}".format("Val(AUC)"), \
+                "{:^9}".format("Val(Kpa)"), \
+                "{:^9}".format("Time"), \
+                "\n{:=^77}".format('')
+
+        self.isTrained = True
+        start_time = time.clock()
+        self.RNN_train_err = []
+        self.RNN_val_err = []
+        previous = 0
+
+        hold_moving = 0
+
+        # for each epoch...
+        pred = []
+        for e in range(0, self.num_epochs):
+            pred = []
+            epoch_time = time.clock()
+            epoch = 0
+            eval = 0
+            n_train = 0
+            n_test = 0
+
+            # train and validate
+            # training, label_train = du.shuffle(training_samples, label_train)
+            # fold_training, holdout_samples, \
+            # fold_train_labels, holdout_labels = du.split_training_test(np.array(training_samples),
+            #                                                            np.array(label_train),
+            #                                                            1 - holdout_size)
+
+            fold_training = np.array(training_samples)[:]
+            fold_train_labels = np.array(label_train)[:]
+            rep_training = np.array(fold_training)
+            rep_label_train = np.array(fold_train_labels)
+
+            if self.balance:
+                t_label_train = du.transpose(RNN.flatten_sequence(label_train))
+                rep = []
+                for r in range(0, self.num_output):
+                    rep.append(int(math.floor((len(t_label_train[r]) / np.nansum(t_label_train[r])) + 1)))
+                    rep_training, rep_label_train = RNN.add_representation(rep_training, rep_label_train, r, rep[r],
+                                                                       0.2)
+                rep_training, rep_label_train = du.sample(rep_training, rep_label_train, p=1, n=len(fold_training))
+
+            for i in range(0, len(rep_training), self.batch_size):
+                batch_cost = []
+                # get the cost of each sequence in the batch
+                for j in range(i, min(len(rep_training) - 1, i + self.batch_size - 1)):
+                    mask = RNN.build_label_mask(rep_label_train[j], self.num_output)
+                    batch_cost.append(self.train_RNN_no_update([rep_training[j]], rep_label_train[j], mask))
+
+                j = min(len(rep_training) - 1, i + self.batch_size - 1)
+
+                mask = RNN.build_label_mask(rep_label_train[j],self.num_output)
+                # print np.nansum(rep_label_train[j]), ':', np.nansum(mask), '--',
+
+                res = self.train_predict_update([rep_training[j]], rep_label_train[j], mask,
+                                                batch_cost, self.batch_size)
+
+                # print res[0]
+
+                epoch += res[0]
+
+                for k in res[1]:
+                    pred.append(k)
+                n_train += int(res[0] > 0)
+
+                self.max_preds = np.max(pred, axis=0)
+                self.min_preds = np.min(pred, axis=0)
+
+            self.test(holdout_samples, holdout_labels, verbose=0, training=True)
+            eval = self.eval_metrics
+            # print r.eval_metrics
+            n_test = 1
+            # for i in range(0,len(holdout_set)):
+            #     eval = self.compute_cost_RNN([holdout_set[i]], holdout_labels[i])
+            #     n_test = 1
+
+            self.RNN_train_err.append(epoch / n_train)
+
+            try:
+                self.RNN_val_err.append(float(1-eval[1]) / n_test) ##changed from eval[0]
+            except TypeError:
+                eval = [0, 0, 0, 0, 0]
+                self.RNN_val_err.append(1-eval[1]) ##changed from eval[0]
+
+            past_epochs = 3
+            avg_train = 0
+            avg_val = 0
+
+            for i in range(0, past_epochs * int(self.trained_epoch >= past_epochs - 1)):
+                avg_train += self.RNN_val_err[len(self.RNN_val_err) - 2 - i]
+                avg_val += self.RNN_val_err[len(self.RNN_val_err) - 1 - i]
+
+            avg_train /= float(past_epochs)
+            avg_val /= float(past_epochs)
+
+            hold_moving = avg_val
+
+            if verbose > 1:
+                print "{:^9}".format("Epoch " + str(self.trained_epoch + 1) + ":"), \
+                    "{0:^9.4f}".format(epoch / n_train), \
+                    "{0:^9.4f}".format(hold_moving) if self.trained_epoch >= past_epochs - 1 \
+                        else "{0:^9}".format("---"), \
+                    "{0:^9.4f}".format(float(eval[0]) / n_test), \
+                    "{0:^9.4f}".format(float(eval[1]) / n_test), \
+                    "{0:^9.4f}".format(float(eval[2]) / n_test), \
+                    "{:^9}".format("{0:.1f}s".format(time.clock() - epoch_time))
+                # "{0:^9.4f}".format(eval[0] / n_test), \
+                # eval = eval[0]
+
+
+            if self.early_stop and len(self.RNN_train_err) > past_epochs:
+                if avg_val - avg_train > 0:
+                    self.load_from_file('RNN_tmp_params')
+                    break
+
+            self.save_parameters('RNN_tmp_params')
+            self.trained_epoch += 1
+
+            if math.isnan(epoch / n_train):
+                if verbose > 2:
+                    print "NaN Value found: Rebuilding Network..."
+                self.isBuilt = False
+                self.isInitialized = False
+
+        if self.num_epochs > 1 and verbose > 2:
+            print "Total Training Time:", "{0:.1f}s".format(time.clock() - start_time)
+
+        self.train_validation_RNN = [['RNN Training Error'], ['RNN Validation Error']]
+        for i in range(0, len(self.RNN_train_err)):
+            self.train_validation_RNN[0].append(str(self.RNN_train_err[i]))
+        for i in range(0, len(self.RNN_val_err)):
+            self.train_validation_RNN[1].append(str(self.RNN_val_err[i]))
 
     def predict(self, test):
+        test_cpy = list(test)
+        if not du.len_deepest(test_cpy) == self.num_input:
+            if self.covariates is not None:
+                for a in range(0, len(test_cpy)):
+                    if type(test_cpy[a]) is not list:
+                        test_cpy[a] = test_cpy[a].tolist()
+                    for e in range(0, len(test[a])):
+                        c = []
+                        for i in range(0, len(self.covariates)):
+                            c.append(test_cpy[a][e][self.covariates[i]])
+                        test_cpy[a][e] = c
 
         if len(self.cov_mean) == 0 or len(self.cov_stdev) == 0:
             print "Scaling factors have not been generated: calculating using test sample"
-            t_tr = du.transpose(RNN.flatten_sequence(test))
+            t_tr = du.transpose(RNN.flatten_sequence(test_cpy))
             self.cov_mean = []
             self.cov_stdev = []
 
@@ -506,18 +1476,19 @@ class RNN:
                 self.cov_stdev.append(sd)
 
         test_samples = []
+        # test_samples = test_cpy
 
         import math
-        for a in range(0, len(test)):
+        for a in range(0, len(test_cpy)):
             sample = []
-            for e in range(0, len(test[a])):
+            for e in range(0, len(test_cpy[a])):
                 covariates = []
-                for i in range(0, len(test[a][e])):
+                for i in range(0, len(test_cpy[a][e])):
                     cov = 0
                     if self.cov_stdev[i] == 0:
                         cov = 0
                     else:
-                        cov = (test[a][e][i] - self.cov_mean[i]) / self.cov_stdev[i]
+                        cov = (test_cpy[a][e][i] - self.cov_mean[i]) / self.cov_stdev[i]
 
                     if math.isnan(cov) or math.isinf(cov):
                         cov = 0
@@ -533,6 +1504,7 @@ class RNN:
         for i in range(0, len(test_samples)):
             # get the prediction and calculate cost
             prediction_RNN = self.pred_RNN([test_samples[i]])
+
             if self.scale_output:
                 prediction_RNN -= self.min_preds
                 prediction_RNN /= (self.max_preds - self.min_preds)
@@ -548,13 +1520,25 @@ class RNN:
 
         return predictions_RNN
 
-    def test(self, test, test_labels=None, label_names=None):
+    def test(self, test, test_labels=None, label_names=None, verbose=10, training=False):
         if test_labels is None:
             return self.predict(test)
+        test_cpy = list(test)
+        if not du.len_deepest(test_cpy) == self.num_input:
+            if self.covariates is not None:
+                for a in range(0, len(test_cpy)):
+                    if type(test_cpy[a]) is not list:
+                        test_cpy[a] = test_cpy[a].tolist()
+                    for e in range(0, len(test_cpy[a])):
+                        c = []
+                        for i in range(0, len(self.covariates)):
+                            c.append(test_cpy[a][e][self.covariates[i]])
+                        test_cpy[a][e] = c
 
         if len(self.cov_mean) == 0 or len(self.cov_stdev) == 0:
-            print "Scaling factors have not been generated: calculating using test sample"
-            t_tr = du.transpose(RNN.flatten_sequence(test))
+            if verbose > 3:
+                print "Scaling factors have not been generated: calculating using test sample"
+            t_tr = du.transpose(RNN.flatten_sequence(test_cpy))
             self.cov_mean = []
             self.cov_stdev = []
 
@@ -565,18 +1549,19 @@ class RNN:
                 self.cov_stdev.append(sd)
 
         test_samples = []
+        # test_samples = test_cpy
 
         import math
-        for a in range(0, len(test)):
+        for a in range(0, len(test_cpy)):
             sample = []
-            for e in range(0, len(test[a])):
+            for e in range(0, len(test_cpy[a])):
                 covariates = []
-                for i in range(0, len(test[a][e])):
+                for i in range(0, len(test_cpy[a][e])):
                     cov = 0
                     if self.cov_stdev[i] == 0:
                         cov = 0
                     else:
-                        cov = (test[a][e][i] - self.cov_mean[i]) / self.cov_stdev[i]
+                        cov = (test_cpy[a][e][i] - self.cov_mean[i]) / self.cov_stdev[i]
 
                     if math.isnan(cov) or math.isinf(cov):
                         cov = 0
@@ -586,8 +1571,10 @@ class RNN:
             test_samples.append(sample)
 
         label_test = test_labels
-        print("\nTesting...")
-        print "Test Samples:", len(test_samples)
+        if verbose > 3:
+            print("\nTesting...")
+        if verbose > 2:
+            print "Test Samples:", len(test_samples)
 
         classes = []
         p_count = 0
@@ -595,21 +1582,23 @@ class RNN:
         avg_class_err = []
         avg_err_RNN = []
 
-        if self.scale_output:
+        if self.scale_output and verbose > 3:
             print "Scaling output..."
 
         predictions_RNN = []
         for i in range(0, len(test_samples)):
             # get the prediction and calculate cost
             prediction_RNN = self.pred_RNN([test_samples[i]])
-            #prediction_RNN += .5-self.avg_preds
+
             if self.scale_output:
                 prediction_RNN -= self.min_preds
                 prediction_RNN /= (self.max_preds - self.min_preds)
                 prediction_RNN = np.clip(prediction_RNN,0,1)
                 prediction_RNN = [(x * [1 if c == self.majorityclass else 0.9999 for c in range(0, self.num_output)])
                                   if np.sum(x) == 4 else x for x in prediction_RNN]
-            avg_err_RNN.append(self.compute_cost_RNN([test_samples[i]], label_test[i]))
+
+            mask = RNN.build_label_mask(label_test[i], self.num_output)
+            avg_err_RNN.append(self.compute_cost_RNN([test_samples[i]], label_test[i], mask))
 
             for j in range(0, len(label_test[i])):
                 p_count += 1
@@ -641,116 +1630,406 @@ class RNN:
         flattened_label = np.array(flattened_label)
         avg_class_pred = np.mean(flattened_label,0)
 
-        print "Predicting:", avg_class_pred, "for baseline*"
+        if verbose > 3:
+            print "Predicting:", avg_class_pred, "for baseline*"
         for i in range(0, len(flattened_label)):
             res = RNN.AverageCrossEntropy(np.array(avg_class_pred), np.array(classes[i]))
             avg_class_err.append(res)
             # res = RNN.AverageCrossEntropy(np.array(predictions_RNN[i]), np.array(classes[i]))
             # avg_err_RNN.append(res)
-        print "*This is calculated from the TEST labels"
+        if verbose > 3:
+            print "*This is calculated from the TEST labels"
 
         from sklearn.metrics import roc_auc_score,f1_score
-        from skll.metrics import kappa
+
+        actual = []
+        predicted = []
+        flattened_label = flattened_label.tolist()
+        for i in range(0, len(predictions_RNN)):
+            if np.sum(flattened_label[i]) == 0:
+                continue
+            actual.append(flattened_label[i].index(max(flattened_label[i])))
+            predicted.append(predictions_RNN[i].index(max(predictions_RNN[i])))
+
+        from sklearn.metrics import confusion_matrix
+        conf_mat = confusion_matrix(actual, predicted)
 
         kpa = []
+        opk = []
         auc = []
         f1s = []
         apr = []
+        fkp = []
+
+        fleiss = du.fleiss_kappa(conf_mat)
+
         t_pred = du.transpose(predictions_RNN)
         t_lab = du.transpose(flattened_label)
 
         for i in range(0,len(t_lab)):
+
+            L = []
+            P = []
+            for j in range(0,len(t_lab[i])):
+                if np.sum(flattened_label[j]) == 0:
+                    continue
+                L.append(t_lab[i][j])
+                P.append(t_pred[i][j])
+
             #if i == 0 or i == 3:
             #    t_pred[i] = du.normalize(t_pred[i],method='max')
-            temp_p = [round(j) for j in t_pred[i]]
+            temp_p = [round(j) for j in P]
 
-            kpa.append(kappa(t_lab[i], t_pred[i]))
-            apr.append(du.Aprime(t_lab[i],t_pred[i]))
-            auc.append(roc_auc_score(t_lab[i],t_pred[i]))
+            if training:
+                self.kappa_threshold[i] = du.kappa_optimized_threshold(L, P)
+            opk.append(du.kappa(L, P, split=self.kappa_threshold[i]))
+            kpa.append(du.kappa(L, P))
+            # fkp.append(du.fleiss_kappa([t_lab[i], P[i]]))
+            apr.append(du.Aprime(L,P))
+            auc.append(roc_auc_score(L,P))
 
             if np.nanmax(temp_p)==0:
                 f1s.append(0)
             else:
-                f1s.append(f1_score(t_lab[i],temp_p))
+                try:
+                    f1s.append(f1_score(L,temp_p))
+                except:
+                    f1s.append(0)
 
         if label_names is None or len(label_names) != len(t_lab):
             label_names = []
             for i in range(0, len(t_lab)):
                 label_names.append("Label " + str(i + 1))
 
-        RNN.print_label_distribution(label_test, label_names)
+        if verbose > 2:
+            RNN.print_label_distribution(label_test, label_names)
 
-        self.eval_metrics = [np.nanmean(avg_err_RNN),np.nanmean(auc),np.nanmean(kpa),
-                             np.nanmean(f1s),np.nanmean(cor_RNN) * 100]
+        self.eval_metrics = [np.nanmean(avg_err_RNN),np.nanmean(auc),np.nanmean(kpa), np.nanmean(opk),
+                             np.nanmean(f1s),fleiss,np.nanmean(cor_RNN) * 100]
 
-        print "\nBaseline Average Cross-Entropy:", "{0:.4f}".format(np.nanmean(avg_class_err))
-        print "\nNetwork Performance:"
-        print "Average Cross-Entropy:", "{0:.4f}".format(np.nanmean(avg_err_RNN))
-        print "AUC:", "{0:.4f}".format(np.nanmean(auc))
-        print "A':", "{0:.4f}".format(np.nanmean(apr))
-        print "Kappa:", "{0:.4f}".format(np.nanmean(kpa))
-        print "F1 Score:", "{0:.4f}".format(np.nanmean(f1s))
-        print "Percent Correct:", "{0:.2f}%".format(np.nanmean(cor_RNN) * 100)
+        if verbose > 2:
+            print "\nBaseline Average Cross-Entropy:", "{0:.4f}".format(np.nanmean(avg_class_err))
+        if verbose > 1:
+            print "\nNetwork Performance:"
+            print "Average Cross-Entropy:", "{0:.4f}".format(np.nanmean(avg_err_RNN))
+            print "A':", "{0:.4f}".format(np.nanmean(apr))
+            print "Kappa:", "{0:.4f}".format(np.nanmean(kpa))
+            print "Optimal Kappa:", "{0:.4f}".format(np.nanmean(opk))
+            print "Fleiss Kappa:", "{0:.4f}".format(fleiss)
+            print "F1 Score:", "{0:.4f}".format(np.nanmean(f1s))
+            print "Percent Correct:", "{0:.2f}%".format(np.nanmean(cor_RNN) * 100)
 
-        print "\n{:<15}".format("  Label"), \
-            "{:<9}".format("  AUC"), \
-            "{:<9}".format("  A'"), \
-            "{:<9}".format("  Kappa"), \
-            "{:<9}".format("  F Stat"), \
-            "\n=============================================="
+            print "\n{:<15}".format("  Label"), \
+                "{:<9}".format("  A'"), \
+                "{:<9}".format("  Kappa"), \
+                "{:<9}".format("  Op Kappa"), \
+                "{:<9}".format("  F Stat"), \
+                "\n=============================================="
 
-        for i in range(0,len(t_lab)):
-            print "{:<15}".format(label_names[i]), \
-                "{:<9}".format("  {0:.4f}".format(auc[i])), \
-                "{:<9}".format("  {0:.4f}".format(apr[i])), \
-                "{:<9}".format("  {0:.4f}".format(kpa[i])), \
-                "{:<9}".format("  {0:.4f}".format(f1s[i]))
-        print "\n=============================================="
+            for i in range(0,len(t_lab)):
+                print "{:<15}".format(label_names[i]), \
+                    "{:<9}".format("  {0:.4f}".format(apr[i])), \
+                    "{:<9}".format("  {0:.4f}".format(kpa[i])), \
+                    "{:<9}".format("  {0:.4f}".format(opk[i])), \
+                    "{:<9}".format("  {0:.4f}".format(f1s[i]))
+            print "\n=============================================="
 
-        print "Confusion Matrix:"
-        actual = []
-        predicted = []
-        flattened_label = flattened_label.tolist()
-        for i in range(0, len(predictions_RNN)):
-            actual.append(flattened_label[i].index(max(flattened_label[i])))
-            predicted.append(predictions_RNN[i].index(max(predictions_RNN[i])))
+        if verbose > 2:
+            print "Confusion Matrix:"
 
-        from sklearn.metrics import confusion_matrix
-        conf_mat = confusion_matrix(actual, predicted)
-        for cm in conf_mat:
-            cm_row = "\t"
-            for element in cm:
-                cm_row += "{:<6}".format(element)
-            print cm_row
-        print "\n=============================================="
+            for cm in conf_mat:
+                cm_row = "\t"
+                for element in cm:
+                    cm_row += "{:<6}".format(element)
+                print cm_row
+            print "\n=============================================="
 
         return predictions_RNN
+
+    def get_name(self):
+        return self.variant + '_' + du.array_as_string(self.covariates)
 
     def get_performance(self):
         return self.eval_metrics
 
 #################################################################################################
 
+def train_and_analyze_features(recurrent_nodes, batches, epochs, dropout1=0.3, dropout2=0.3, step_size=0.01,
+                             balance_model=False, scale_output=True, early_stop=False, variant="GRU"):
+
+    confidence_table = []
+    uid = 1
+
+    filename = "Dataset/affect_ground_truth_reduced_features.csv"
+
+    model_cov = range(3, 95)
+
+    import random as rand
+
+    np.random.seed(0)
+    rand.seed(0)
+
+    data, labels, student = RNN.load_data(filename, 0, 1, model_cov, range(95, 99), one_hot_labels=False)
+
+    data, labels = du.shuffle(data, labels)
+    data, holdout, labels, hold_label = du.split_training_test(data, labels, 0.8)
+
+    #####################
+
+    cor = np.corrcoef(du.transpose(RNN.flatten_sequence(data)))
+    du.writetoCSV(cor, "correlationMat")
+
+    covariates = []
+    n_cov = du.len_deepest(data)
+    print "Covariates before filtering:", n_cov
+
+    for i in range(0, len(cor)):
+        valid = True
+        for j in range(i + 1, len(cor[i])):
+            if (np.floor(10 * cor[i][j])) * .1 > 1:
+                valid = False
+                break
+        if valid:
+            covariates.append(i)
+
+    print "Covariates after filtering:", len(covariates)
+
+    #####################
+
+    RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    eval_metrics = []
+
+    NET = RNN(variant)
+    NET.set_hyperparams(recurrent_nodes, batch_size=batches, num_folds=2, num_epochs=epochs, step_size=step_size,
+                         dropout1=dropout1, dropout2=dropout2)
+
+    RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    NET.set_training_params(batches, epochs, balance=balance_model, scale_output=scale_output,
+                             early_stop=early_stop)
+
+    NET.train(data, labels, covariates=covariates, holdout_samples=holdout, holdout_labels=hold_label)
+
+    feature_data = []
+    for i in range(0,len(covariates)):
+        ft = np.zeros(len(covariates)).tolist()
+        ft[i] = 1
+        feature_data.append(ft)
+
+    pred = NET.predict([feature_data])
+
+    du.writetoCSV(pred,'feature_predictions')
+
+
+
+def train_and_apply_model(file, recurrent_nodes, batches, epochs, dropout1=0.3, dropout2=0.3, step_size=0.01,
+                             balance_model=False, scale_output=True, early_stop=False, variant="GRU"):
+
+
+    confidence_table = []
+    uid = 1
+
+    # filename = "Dataset/ground_truth_no_resample.csv"
+    filename = "Dataset/affect_ground_truth_reduced_features.csv"
+    # filename = "Dataset/affect_labeled_observations.csv"
+
+    model_cov = range(3, 95)
+
+    data_cov = range(4, 96)
+
+    import random as rand
+
+    np.random.seed(0)
+    rand.seed(0)
+
+    data, labels, student = RNN.load_data(filename, 0, 1, model_cov, range(95, 99), one_hot_labels=False)
+
+    data, labels = du.shuffle(data, labels)
+    data, holdout, labels, hold_label = du.split_training_test(data, labels, 0.8)
+
+    test, student = RNN.load_unlabeled_data(file, 3,0, data_cov)
+
+
+    #####################
+
+    cor = np.corrcoef(du.transpose(RNN.flatten_sequence(data)))
+    du.writetoCSV(cor, "correlationMat")
+
+    covariates = []
+    n_cov = du.len_deepest(data)
+    print "Covariates before filtering:", n_cov
+
+    for i in range(0, len(cor)):
+        valid = True
+        for j in range(i + 1, len(cor[i])):
+            if (np.floor(10 * cor[i][j])) * .1 > 1:
+                valid = False
+                break
+        if valid:
+            covariates.append(i)
+
+    print "Covariates after filtering:", len(covariates)
+
+    #####################
+
+    RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    eval_metrics = []
+
+    GNET = RNN(variant)
+    GNET.set_hyperparams(recurrent_nodes, batch_size=batches, num_folds=2, num_epochs=epochs, step_size=step_size,
+                         dropout1=dropout1, dropout2=dropout2)
+
+    RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    GNET.set_training_params(batches, epochs, balance=balance_model, scale_output=scale_output,
+                             early_stop=early_stop)
+
+    GNET.train(data, labels, covariates=covariates, holdout_samples=holdout, holdout_labels=hold_label)
+    du.writetoCSV(GNET.train_validation_RNN, 'training')
+
+    pred = GNET.predict(test)
+    label_name = ["Confused", "Concentrating", "Bored", "Frustrated"]
+
+    for k in range(0, len(pred)):
+        confidence_table.append([uid, pred[k][0], pred[k][1], pred[k][2], pred[k][3]])
+        uid += 1
+
+    du.writetoCSV(confidence_table, 'predictions', ['Unique ID', 'Confused', 'Concentrating',
+                                                         'Bored', 'Frustrated'])
+
+
+def train_and_save_model(file, recurrent_nodes, batches, epochs, dropout1=0.3, dropout2=0.3, step_size=0.01,
+                         balance_model=False, scale_output=True, early_stop=False, variant="GRU"):
+    confidence_table = []
+    uid = 1
+
+    # filename = "Dataset/affect_reconstructed_rural.csv"
+    # filename = "Dataset/ground_truth_no_resample.csv"
+    filename = "Dataset/affect_ground_truth_reduced_features.csv"
+    # filename = "Dataset/affect_labeled_observations.csv"
+
+    model_cov = range(3, 95)
+    model_lab = range(95, 99)
+
+    import random as rand
+
+    np.random.seed(0)
+    rand.seed(0)
+
+    data, labels, student = RNN.load_data(filename, 0, 1, model_cov, model_lab, one_hot_labels=False)
+
+    data, labels = du.shuffle(data, labels)
+    data, holdout, labels, hold_label = du.split_training_test(data, labels, 0.8)
+
+    #####################
+
+    cor = np.corrcoef(du.transpose(RNN.flatten_sequence(data)))
+    du.writetoCSV(cor, "correlationMat")
+
+    covariates = []
+    n_cov = du.len_deepest(data)
+    print "Covariates before filtering:", n_cov
+
+    for i in range(0, len(cor)):
+        valid = True
+        for j in range(i + 1, len(cor[i])):
+            if (np.floor(10 * cor[i][j])) * .1 > 1:
+                valid = False
+                break
+        if valid:
+            covariates.append(i)
+
+    print "Covariates after filtering:", len(covariates)
+
+    #####################
+
+    RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    eval_metrics = []
+
+    GNET = RNN(variant)
+    GNET.set_hyperparams(recurrent_nodes, batch_size=batches, num_folds=2, num_epochs=epochs, step_size=step_size,
+                         dropout1=dropout1, dropout2=dropout2)
+
+    RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+    GNET.set_training_params(batches, epochs, balance=balance_model, scale_output=scale_output,
+                             early_stop=early_stop)
+
+    GNET.train_stable(data, labels, covariates=covariates, holdout_samples=holdout, holdout_labels=hold_label)
+
+    GNET.save_parameters(file)
+    return GNET
+
+
+def test_model(model, file):
+
+    model_cov = range(6, 210)
+    model_lab = range(210, 214)
+
+    test, labels, student = RNN.load_data(file, 1, 4, model_cov, model_lab, one_hot_labels=False)
+
+    pred = model.test(test, labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
+
+
+def apply_model(model, file, output):
+
+    confidence_table = []
+    model_cov = range(3, 95)
+    test, student = RNN.load_unlabeled_data(file, 2, 95, model_cov)
+
+    pred = model.predict(test)
+
+    ft = RNN.flatten_sequence(test)
+
+    for k in range(0, len(pred)):
+        confidence_table.append([ft[k][0], ft[k][1], ft[k][2], pred[k][0], pred[k][1], pred[k][2], pred[k][3]])
+
+    du.writetoCSV(confidence_table, output, ['clip', 'problem_log_id', 'user_id', 'Confused', 'Concentrating',
+                                                    'Bored', 'Frustrated'])
+
+
 
 def train_and_evaluate_model(recurrent_nodes, batches, epochs, dropout1=0.3, dropout2=0.3, step_size=0.01,
-                             balance_model=False, scale_output=True, variant="GRU", folds=5):
+                             balance_model=False, scale_output=True, early_stop=False, variant="GRU", folds=5):
     confidence_table = []
     uid = 1
 
     filename = "Dataset/ground_truth_no_resample.csv"
+    # filename = "Dataset/affect_ground_truth_reduced_features.csv"
+    # filename = "Dataset/affect_labeled_observations.csv"
+    # filename = "Dataset/problem_level_affect.csv"
+    #filename = "Dataset/affect_actions.csv"
 
-    data, labels, student = RNN.load_data(filename, 0, 1, range(3, 207), range(207, 211))
+    model_cov = range(3, 207)
+    # model_cov = range(3, 95)
+
+
+    model_lab = range(207, 211)
+
+    #
+    # filename = "Dataset/affect_reconstructed_rural.csv"
+    #
+    #
+    # model_cov = range(6, 210)
+    # model_lab = range(210, 214)
+
+
+    import random as rand
+
+    np.random.seed(0)
+    rand.seed(0)
+
+    data, labels, student = RNN.load_data(filename, 0, 1, model_cov, model_lab, one_hot_labels=False)
 
     RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
     eval_metrics = []
     unique_st = du.unique(student)
     st_fold = folds
 
+    print '\nNum Students:', len(unique_st)
+    print 'Average Sequence Length:', np.mean([len(d) for d in data])
+
     fold = []
     for f in range(0, st_fold):
         fold.append(0)
 
-    import random as rand
     for f in unique_st:
         r = rand.randrange(0, st_fold)
         for s in range(0, len(student)):
@@ -758,9 +2037,9 @@ def train_and_evaluate_model(recurrent_nodes, batches, epochs, dropout1=0.3, dro
                 student[s] = r
                 fold[r] += 1
 
-    print '\nStudent Fold Distribution:'
+    print '\nStudent Assignment Fold Distribution:'
     print fold
-    GNET = ""
+
     for f in range(0, st_fold):
         training = []
         test = []
@@ -774,18 +2053,44 @@ def train_and_evaluate_model(recurrent_nodes, batches, epochs, dropout1=0.3, dro
                 training.append(data[i])
                 label_train.append(labels[i])
 
-        training, label_train = du.shuffle(training, label_train)
+        # training, label_train = du.shuffle(training, label_train)
+        # training, holdout, label_train, hold_label = du.split_training_test(training,label_train,0.8)
         test, label_test = du.shuffle(test, label_test)
 
-        GNET = RNN(variant)
-        GNET.set_hyperparams(recurrent_nodes, batch_size=batches, num_folds=2, num_epochs=epochs, step_size=step_size,
+        #####################
+
+        cor = np.corrcoef(du.transpose(RNN.flatten_sequence(training)))
+        du.writetoCSV(cor, "correlationMat")
+
+        covariates = []
+        n_cov = du.len_deepest(training)
+        print "Covariates before filtering:", n_cov
+
+        for i in range(0,len(cor)):
+            valid = True
+            for j in range(i+1,len(cor[i])):
+                if (np.floor(10*cor[i][j]))*.1 > 1:
+                    valid = False
+                    break
+            if valid:
+                covariates.append(i)
+
+        print "Covariates after filtering:", len(covariates)
+
+        #####################
+
+        NET = RNN(variant)
+        NET.set_hyperparams(recurrent_nodes, batch_size=batches, num_folds=2, num_epochs=epochs, step_size=step_size,
                              dropout1=dropout1, dropout2=dropout2)
 
         RNN.print_label_distribution(label_train, ["Confused", "Concentrating", "Bored", "Frustrated"])
-        GNET.set_training_params(batches, epochs, balance=balance_model, scale_output=scale_output)
-        GNET.train(training, label_train)
+        NET.set_training_params(batches, epochs, balance=balance_model, scale_output=scale_output,
+                                 early_stop=early_stop)
+        NET.train(training, label_train, covariates=covariates, holdout_size=0.2)
+        du.writetoCSV(NET.train_validation_RNN,'training')
+        pred = NET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
 
-        pred = GNET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
+
         label_name = ["Confused", "Concentrating", "Bored", "Frustrated"]
         lab = RNN.flatten_sequence(label_test)
         for k in range(0, len(pred)):
@@ -793,15 +2098,19 @@ def train_and_evaluate_model(recurrent_nodes, batches, epochs, dropout1=0.3, dro
                                      pred[k][0], pred[k][1], pred[k][2], pred[k][3]])
             uid += 1
 
-        eval_metrics.append(GNET.get_performance())
+        eval_metrics.append(NET.get_performance())
 
-    du.writetoCSV(eval_metrics, 'folds')
-    ##################
-    sys.setrecursionlimit(10000)
-    print "Saving Instance"
-    pu.saveInstance(GNET,"RNN.pickle")
-    print "Instance Saved"
-    ##################
+    success = False
+    i = 0
+
+    while not success:
+        try:
+            du.writetoCSV(eval_metrics, 'folds' + str(i))
+            success = True
+        except IOError:
+            success = False
+            i += 1
+
     for m in eval_metrics:
         print m
 
@@ -810,26 +2119,39 @@ def train_and_evaluate_model(recurrent_nodes, batches, epochs, dropout1=0.3, dro
     du.writetoCSV(confidence_table, 'label_confidence', ['Unique ID', 'Human Label', 'Confused', 'Concentrating',
                                                          'Bored', 'Frustrated'])
 
-def evaluate_model(data_filename, pickle_file, recurrent_nodes, batches, epochs,
-							 dropout1=0.3, dropout2=0.3, step_size=0.01, balance_model=False,
-							 scale_output=True, variant="GRU", folds=5):
+    return NET
+
+
+
+
+def train_and_evaluate_action_model(recurrent_nodes, batches, epochs, dropout1=0.3, dropout2=0.3, step_size=0.01,
+                             balance_model=False, scale_output=True, early_stop=False, variant="GRU", folds=5):
     confidence_table = []
     uid = 1
 
-    #filename = "Dataset/ground_truth_no_resample.csv"
-    filename = data_filename
-    data, labels, student = RNN.load_data(filename, 0, 1, range(3, 207), range(207, 211))
+    filename = "Dataset/affect_actions.csv"
+
+    model_cov = range(12, 20)
+    model_lab = range(33, 37)
+
+    import random as rand
+
+    np.random.seed(0)
+    rand.seed(0)
+
+    data, labels, student = RNN.load_data(filename, 4, 23, model_cov, model_lab, one_hot_labels=False)
 
     RNN.print_label_distribution(labels, ["Confused", "Concentrating", "Bored", "Frustrated"])
     eval_metrics = []
     unique_st = du.unique(student)
     st_fold = folds
 
+    print '\nNum Students:', len(unique_st)
+
     fold = []
     for f in range(0, st_fold):
         fold.append(0)
 
-    import random as rand
     for f in unique_st:
         r = rand.randrange(0, st_fold)
         for s in range(0, len(student)):
@@ -837,13 +2159,8 @@ def evaluate_model(data_filename, pickle_file, recurrent_nodes, batches, epochs,
                 student[s] = r
                 fold[r] += 1
 
-    print '\nStudent Fold Distribution:'
+    print '\nStudent Assignment Fold Distribution:'
     print fold
-
-    print "Loading GNET from Pickle File"
-    GNET = pu.loadInstance(pickle_file)
-    print "Pickle File: %s  -- Loaded" % pickle_file
-    print "Evaluating Model"
 
     for f in range(0, st_fold):
         training = []
@@ -859,9 +2176,41 @@ def evaluate_model(data_filename, pickle_file, recurrent_nodes, batches, epochs,
                 label_train.append(labels[i])
 
         training, label_train = du.shuffle(training, label_train)
+        training, holdout, label_train, hold_label = du.split_training_test(training,label_train,0.8)
         test, label_test = du.shuffle(test, label_test)
-        
-        pred = GNET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
+
+        #####################
+
+        cor = np.corrcoef(du.transpose(RNN.flatten_sequence(training)))
+        du.writetoCSV(cor, "correlationMat")
+
+        covariates = []
+        n_cov = du.len_deepest(training)
+        print "Covariates before filtering:", n_cov
+
+        for i in range(0,len(cor)):
+            valid = True
+            for j in range(i+1,len(cor[i])):
+                if (np.floor(10*cor[i][j]))*.1 > 1:
+                    valid = False
+                    break
+            if valid:
+                covariates.append(i)
+
+        print "Covariates after filtering:", len(covariates)
+
+        #####################
+
+        NET = RNN(variant)
+        NET.set_hyperparams(recurrent_nodes, batch_size=batches, num_folds=2, num_epochs=epochs, step_size=step_size,
+                             dropout1=dropout1, dropout2=dropout2)
+
+        RNN.print_label_distribution(label_train, ["Confused", "Concentrating", "Bored", "Frustrated"])
+        NET.set_training_params(batches, epochs, balance=balance_model, scale_output=scale_output,
+                                 early_stop=early_stop)
+        NET.train(training, label_train, covariates=covariates,holdout_samples=holdout,holdout_labels=hold_label)
+        du.writetoCSV(NET.train_validation_RNN,'training')
+        pred = NET.test(test, label_test, ["Confused", "Concentrating", "Bored", "Frustrated"])
         label_name = ["Confused", "Concentrating", "Bored", "Frustrated"]
         lab = RNN.flatten_sequence(label_test)
         for k in range(0, len(pred)):
@@ -869,9 +2218,18 @@ def evaluate_model(data_filename, pickle_file, recurrent_nodes, batches, epochs,
                                      pred[k][0], pred[k][1], pred[k][2], pred[k][3]])
             uid += 1
 
-        eval_metrics.append(GNET.get_performance())
+        eval_metrics.append(NET.get_performance())
 
-    du.writetoCSV(eval_metrics, 'folds')
+    success = False
+    i = 0
+
+    while not success:
+        try:
+            du.writetoCSV(eval_metrics, 'folds' + str(i))
+            success = True
+        except IOError:
+            success = False
+            i += 1
 
     for m in eval_metrics:
         print m
@@ -880,11 +2238,84 @@ def evaluate_model(data_filename, pickle_file, recurrent_nodes, batches, epochs,
     print np.mean(eval_metrics, axis=0).tolist()
     du.writetoCSV(confidence_table, 'label_confidence', ['Unique ID', 'Human Label', 'Confused', 'Concentrating',
                                                          'Bored', 'Frustrated'])
+
+    return NET
+
+
+
+
+def sandbox():
+
+    target_values = T.matrix('target_output')
+
+    num_input = 1
+    num_units = 2
+    num_output = 1
+
+    step_size = 0.1
+
+
+    # lasagne.layers.LSTMLayer(
+    print "building network..."
+    # Recurrent network structure
+    l_in = lasagne.layers.InputLayer(shape=(None, None, num_input))
+    l_Recurrent = lasagne.layers.LSTMLayer(l_in, num_units, precompute_input=True, grad_clipping=100.,
+                                           ingate=Gate(W_in=lasagne.init.Constant(11)),
+                                           forgetgate=Gate(W_in=lasagne.init.Constant(22)),
+                                           outgate=Gate(W_in=lasagne.init.Constant(33)),
+                                           hid_init=lasagne.init.Constant(999),
+
+                                           cell_init=lasagne.init.Constant(333)
+                                           )
+    l_reshape = lasagne.layers.ReshapeLayer(l_Recurrent, shape=(-1, num_units))
+    l_output = lasagne.layers.DenseLayer(l_reshape, num_units=num_output, W=lasagne.init.Constant(2),
+                                                  nonlinearity=lasagne.nonlinearities.softmax)
+    network_output = lasagne.layers.get_output(l_output, deterministic=False)
+    cost = T.nnet.categorical_crossentropy(network_output, target_values).mean()
+    all_params = lasagne.layers.get_all_params(l_output, trainable=True)
+    update = lasagne.updates.adagrad(cost, all_params, step_size)
+    train_update = theano.function([l_in.input_var, target_values], cost,
+                                            updates=update, allow_input_downcast=True)
+    predict = theano.function([l_in.input_var], [network_output], allow_input_downcast=True)
+    print "{:=<60}".format('')
+
+    print "params >>", lasagne.layers.count_params(l_Recurrent)
+    print "params >>", lasagne.layers.count_params(l_output)
+    p = lasagne.layers.get_all_param_values(l_output)
+    for i in p:
+        print i
+    # print "output >>", lasagne.layers.get_all_param_values(l_output)
 
 
 if __name__ == "__main__":
     run_start = time.clock()
-    train_and_evaluate_model(200, 1, 20, step_size=0.005, balance_model=False, scale_output=True, variant="GRU")
-    evaluate_model("Dataset/ground_truth_no_resample.csv", "RNN.pickle", 200, 1, 20, step_size=0.005, balance_model=False, scale_output=True, variant="GRU")
+    np.random.seed(0)
+
+    # sandbox()
+
+    # # train and test
+    # mod = train_and_save_model('affect_lstm',200, 1, 100, dropout1=0.0, dropout2=0.3, step_size=0.001,
+    #                            balance_model=False, scale_output=True, early_stop=True, variant="LSTM")
+    # # #
+    # # # test_model(mod, 'Dataset/affect_reconstructed_suburban.csv')
+    # # #
+    # #
+    #
+    # apply_model(mod, 'Dataset/cohort1_seq.csv', 'cohort1')
+    # apply_model(mod, 'Dataset/cohort2_seq.csv', 'cohort2')
+
+#####
+    train_and_evaluate_model(200, 1, 100, dropout1=0.0, dropout2=0.5, step_size=0.001, balance_model=False,
+                                scale_output=True, early_stop=True, variant="LSTM")
+
+    # train_and_analyze_features(200, 1, 100, dropout1=0.0, dropout2=0.3, step_size=0.001, balance_model=False,
+    #                            scale_output=True, early_stop=True, variant="GRU")
+
+    # train_and_apply_model('Dataset/ft_PSAVK69.csv',200,1,100, dropout1=0.0, dropout2=0.3, step_size=0.001,
+    #                       balance_model=False, scale_output=True, early_stop=True, variant="LSTM")
+
+    # train_and_evaluate_action_model(200, 1, 100, dropout1=0.0, dropout2=0.3, step_size=0.001,
+    #                                 balance_model=False, scale_output=False, early_stop=True, variant="LSTM")
+
     print 'Total Runtime:', "{0:.1f}s".format(time.clock() - run_start)
 
