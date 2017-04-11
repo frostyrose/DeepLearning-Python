@@ -57,6 +57,7 @@ def train_and_save_model(model_file, recurrent_nodes, batches, epochs, dropout1=
     ###
     # pickle and save RNN model as model_file
     ###
+    RNN.save_model(net, model_file)
     return net
 
 
@@ -66,9 +67,9 @@ def apply_model(model_file, file, output):
         ###
         # attempt to load pickled model from model_file
         ###
-        pass # remove once the code is implemented
+        NET = RNN.load_model(model_file)
     except:
-        train_and_save_model(model_file, 200, 1, 100, dropout1=0.0, dropout2=0.3, step_size=0.001, balance_model=False,
+        NET = train_and_save_model(model_file, 200, 1, 100, dropout1=0.0, dropout2=0.3, step_size=0.001, balance_model=False,
                              scale_output=True, early_stop=True, variant="LSTM")
 
     confidence_table = []
