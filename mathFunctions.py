@@ -3,19 +3,17 @@ import DataUtility as du
 import urllib3
 import urllib
 import numpy as np
-
+import flaskServer as fs
 
 def downloadFileFromJavaFTPServer(dataFile):
     # Should Open and Read in the Data File
-    url = "ftp://Cameron@127.0.0.1:21/" + dataFile #'D:/Users/Cameron/Documents/GitHub/ALI-DataDumper/' + dataFile
+    url = "http://" + fs.hostname + "/files/" + dataFile
     print "Grabbing File at: " + url
     urllib.urlretrieve(url, 'Resources/'+dataFile)
-
-
     return "Resources/" + dataFile #return location of locally saved file
 
 def chiSquaredTest(dataFile):
-    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
     f_obs, headers = du.loadFloatCSVwithHeaders(filename)
     print f_obs
     result_statistic, pvals = Stats.chisquare(f_obs)
@@ -42,7 +40,7 @@ def chiSquaredTest(dataFile):
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
 
 def chi2(dataFile):
-    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
     dataValues, headers = du.loadFloatCSVwithHeaders(filename)
 
     x2, pValue, dof, exp  = Stats.chi2_contingency(dataValues)
@@ -73,7 +71,7 @@ def anova(dataFile):
 
     ANOVA will compare the means of all headers in the data file.
     '''
-    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
     dataValues, headers = du.loadFloatCSVwithHeaders(filename)
 
     #transpose data here, such that each row will be the data points for each heading
@@ -99,7 +97,7 @@ def anova(dataFile):
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
 
 def ttest(dataFile, testVer):
-    filename = "Resources/Test-Data-Set-1480976936524.csv"#downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
+    filename = downloadFileFromJavaFTPServer(dataFile) #where datafile will be the location of the data on the external machine
     dataValues, headers = du.loadFloatCSVwithHeaders(filename)
 
     #transpose data here, such that each row will be the data points for each heading
@@ -131,3 +129,5 @@ def ttest(dataFile, testVer):
     writeOut(tStat, pValue, newFileName)
 
     return newFileName #passing the file name back up so that the main Flask code can handle sending the file back to Java
+
+

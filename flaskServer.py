@@ -5,7 +5,7 @@ from mathFunctions import *
 from flask import Flask
 
 app = Flask(__name__)
-hostname = "localhost"
+hostname = "ali-aws.cs.wpi.edu"
 
 @app.route('/')
 def root_menu():
@@ -19,14 +19,14 @@ def runTest(pickleFile, dataFile):
     print dataFile2
     print pickleFile
     if(pickleFile == "RNN"):
-        ApplyDetector.apply_model(pickleFile2, local_file, "/home/ali/Results/"+filename)
-        #RNN.evaluate_model(dataFile2, pickleFile2, 200, 1, 20, step_size=0.005, balance_model=False, scale_output=True, variant="GRU")
+        confidence_table = ApplyDetector.apply_model(pickleFile2, local_file, "/home/ali/Results/"+filename)
+        ApplyDetector.aggregate_estimates(confidence_table, "/home/ali/Results/" + dataFile)
     return ("Testing " + dataFile + " on the " + pickleFile + " model.")
 
 
 @app.route('/TRAIN/<testType>/<filename>')
 def runTraining(testType, filename):
-    local_file = downloadFileFromJavaFTPServer(filename)
+    local_file = downloadFileFromJavaFTPServer(filename, hostname)
     if(testType == "RNN"):
         model = ApplyDetector.train_and_save_model("RNN.pickle", local_file, "/home/ali/Results/"+filename)
     return "Training on %s" % filename
