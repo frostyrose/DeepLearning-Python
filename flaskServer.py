@@ -18,7 +18,7 @@ def runTest(pickleFile, dataFile):
     pickleFile2 = pickleFile + ".pickle"
     print dataFile2
     print pickleFile
-    if(pickleFile == "RNN"):
+    if(pickleFile == "AFFECT"):
         confidence_table = ApplyDetector.apply_model(pickleFile2, local_file, "/home/ali/Results/"+filename)
         ApplyDetector.aggregate_estimates(confidence_table, "/home/ali/Results/" + dataFile)
     return ("Testing " + dataFile + " on the " + pickleFile + " model.")
@@ -27,8 +27,8 @@ def runTest(pickleFile, dataFile):
 @app.route('/TRAIN/<testType>/<filename>')
 def runTraining(testType, filename):
     local_file = downloadFileFromJavaFTPServer(filename, hostname)
-    if(testType == "RNN"):
-        model = ApplyDetector.train_and_save_model("RNN.pickle", local_file, "/home/ali/Results/"+filename)
+    if(testType == "AFFECT"):
+        model = ApplyDetector.train_and_save_model("AFFECT.pickle", local_file, "/home/ali/Results/"+filename)
     return "Training on %s" % filename
 
 
